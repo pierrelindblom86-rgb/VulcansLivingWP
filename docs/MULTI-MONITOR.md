@@ -109,14 +109,66 @@ ALL EXECUTABLE CHECKS PASSED
 Independent mode played two different 1080p videos simultaneously; span mode produced one surface
 at `-1920,0 3840x1080`; switching modes kept every assignment; the engine stop removed every surface.
 
+### Display changes exercised on real hardware (2026-10-26)
+
+Span mode was left running on the two physical screens while Windows' display configuration was
+changed underneath it. Evidence is taken from the application log and from the monitor rectangles
+after each step.
+
+**Disconnect and reconnect** — `DisplaySwitch.exe /internal` (PC screen only) removes the second
+display exactly as an unplug does at the API level; `/extend` brings it back.
+
+```
+14:13:04  WM_DISPLAYCHANGE received
+14:13:07  Rebuilding the wallpaper after a display/shell change (layoutChanged=True, surfaces=1)
+14:13:08  Wallpaper set: Span: [span (1920x1080 at 0,0) -> glitch-girl...] on 1 surface(s).
+14:13:25  WM_DISPLAYCHANGE received
+14:13:29  Rebuilding the wallpaper after a display/shell change (layoutChanged=True, surfaces=1)
+14:13:31  Wallpaper set: Span: [span (3840x1080 at -1920,0) -> glitch-girl...] on 1 surface(s).
+```
+
+The span shrank to the remaining screen and grew back to the full union; no crash, no stuck black
+surface, one decoder throughout.
+
+**Primary-monitor change** — positions were swapped with `ChangeDisplaySettingsEx`
+(`CDS_SET_PRIMARY`, `DM_POSITION`) so the left screen became primary, then the original primary was
+restored. Resolution and refresh rate were not touched.
+
+```
+14:14:19  WM_DISPLAYCHANGE received
+14:14:21  Wallpaper set: Span: [span (3840x1080 at 0,0) -> glitch-girl...] on 1 surface(s).
+14:14:41  WM_DISPLAYCHANGE received (original primary restored)
+14:14:44  Wallpaper set: Span: [span (3840x1080 at -1920,0) -> glitch-girl...] on 1 surface(s).
+```
+
+The span followed the new origin in both directions instead of keeping stale coordinates.
+
+**Explorer restart** — `explorer.exe` was terminated; Windows restarted it on its own.
+
+```
+14:15:11  Explorer restart detected (TaskbarCreated); wallpaper will be re-applied.
+14:15:12  Rebuilding the wallpaper after a display/shell change (hostGone=True, surfaces=1)
+14:15:12  Wallpaper layer created: WorkerW 0x53065A visible=True rect=-1920,0 3840x1080.
+14:15:13  Wallpaper set: Span: [span (3840x1080 at -1920,0) -> glitch-girl...] on 1 surface(s).
+```
+
+A fresh `WorkerW` was found and the span was re-applied about 1.6 seconds after the shell came back;
+the application kept running.
+
+After the tests the original primary monitor, arrangement, settings and wallpaper were restored and
+verified.
+
 ### Not verified on hardware
 
 These need equipment or conditions the development machine did not have. They are **not** passes:
 
 - three or more physical monitors (the synthetic plan tests cover the geometry only);
 - mixed-DPI scaling between monitors;
-- physically unplugging/replugging a monitor or changing the primary display while playing;
-- an Explorer restart and a Windows restart with span mode active;
+- pulling a monitor cable, which also removes the monitor's EDID identity; the disconnect test used
+  Windows' own display-mode switch, so the identity-removal path itself was not exercised;
+- a resolution change (as opposed to a disconnect or rearrangement) while span mode is playing;
+- a full Windows restart with span mode active (application restart with saved assignments is
+  covered by the settings reload, and the 1.2.x startup restore path was verified separately);
 - Remote Desktop and sleep/resume with the new modes (the pause plumbing is unchanged, and lock /
   display-off pausing was verified separately — see the README test suites).
 
