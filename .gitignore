@@ -1,0 +1,36 @@
+# Build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.pdb
+*.dll
+
+# Release artifacts — the installer is attached to a GitHub release, never committed
+release/
+dist/
+dist-*/
+installer/out/
+
+# Local test scratch
+tmp/
+tmp-*/
+tmp_*
+test-videos/
+build-icons/
+dist-check/
+pwallpapertmppreview-in-card-test/
+
+# Local toolchain and agent metadata
+.toolchain/
+.toolchain-dotnet-install.ps1
+.freebuff/
+
+# Logs and stray leftovers
+*.log
+AppVersion.dll
+
+# Windows
+Thumbs.db
+desktop.ini

@@ -1,0 +1,16 @@
+# Normalise line endings on checkout; keep .ico/.png byte-exact.
+* text=auto eol=crlf
+
+*.cs    text diff=csharp
+*.csproj text
+*.ps1   text diff=powershell
+*.iss   text
+*.md    text
+*.yml   text
+*.json  text
+*.config text
+*.manifest text
+
+*.ico binary
+*.png binary
+*.exe binary
