@@ -37,7 +37,8 @@ location of each file.
 
 ## 2. Download and install
 
-1. Download **`VulcansLivingWP_Setup.exe`**.
+1. Download **`VulcansLivingWP_Setup.exe`** from the
+   [latest release](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/latest).
 2. Double-click it and follow the wizard.
 3. Choose whether you want a **desktop shortcut** and whether the app should **start with Windows**
    (both are optional; starting with Windows is recommended so the wallpaper is ready after sign-in).
