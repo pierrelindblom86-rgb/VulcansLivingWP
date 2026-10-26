@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
 
@@ -6,6 +7,23 @@ namespace FluxWall.Settings
 {
     public enum ScalingMode { Fill = 0, Fit = 1, Stretch = 2 }
     public enum MonitorChoice { Primary = 0, All = 1, Selected = 2 }
+
+    /// <summary>
+    /// How wallpapers are laid out across monitors.
+    /// SameAll (mode C) is the 1.2.x behaviour and the default for upgraded users.
+    /// </summary>
+    public enum DisplayMode { SameAll = 0, Independent = 1, Span = 2 }
+
+    /// <summary>How the single span video is fitted into the combined desktop.</summary>
+    public enum SpanFit { Stretch = 0, PreserveAspect = 1 }
+
+    /// <summary>One saved monitor → wallpaper pairing.</summary>
+    public class MonitorAssignment
+    {
+        /// <summary>Stable monitor key (see MonitorService.KeyFor).</summary>
+        public string MonitorKey { get; set; } = "";
+        public string WallpaperId { get; set; } = "";
+    }
 
     /// <summary>Visualizer drawing styles.</summary>
     public enum VisualizerStyle { Bars = 0, Waveform = 1, Circle = 2 }
@@ -37,6 +55,42 @@ namespace FluxWall.Settings
         public MonitorChoice TargetMonitors { get; set; } = MonitorChoice.Primary;
         public string SelectedMonitorDevice { get; set; } = "";
         public ScalingMode Scaling { get; set; } = ScalingMode.Fill;
+
+        #region Multi-monitor layout (1.3.0)
+        // Upgrading users keep the 1.2.x behaviour: one video on the monitors
+        // selected above. Independent and span layouts are opt-in.
+
+        public DisplayMode DisplayMode { get; set; } = DisplayMode.SameAll;
+
+        /// <summary>Per-monitor choices used by Independent mode.</summary>
+        public List<MonitorAssignment> MonitorAssignments { get; set; } = new List<MonitorAssignment>();
+
+        /// <summary>Monitor keys taking part in span mode. Empty = every monitor.</summary>
+        public List<string> SpanMonitors { get; set; } = new List<string>();
+
+        /// <summary>Video used by span mode, kept separately so mode switching is lossless.</summary>
+        public string SpanWallpaperId { get; set; } = "";
+
+        public SpanFit SpanFit { get; set; } = SpanFit.Stretch;
+
+        /// <summary>
+        /// Schema marker for settings migrations. 0 = written by 1.2.x or older.
+        /// </summary>
+        public int SettingsSchema { get; set; } = 0;
+        #endregion
+
+        #region Updates (1.3.0)
+        public bool CheckForUpdates { get; set; } = true;
+        public DateTime LastUpdateCheckUtc { get; set; } = DateTime.MinValue;
+        /// <summary>Last version the user was told about, so startup never nags.</summary>
+        public string DismissedUpdateVersion { get; set; } = "";
+
+        // Last successful answer, cached so the About page can show the update
+        // state offline without contacting GitHub again.
+        public string LatestKnownVersion { get; set; } = "";
+        public string LatestReleaseUrl { get; set; } = "";
+        public string LatestReleaseNotes { get; set; } = "";
+        #endregion
 
         public string PauseHotkey { get; set; } = "Ctrl+Alt+W";
         public bool PlayWallpaperAudio { get; set; } = false;
@@ -121,6 +175,13 @@ namespace FluxWall.Settings
             if (PauseHotkey == null) PauseHotkey = "";
             if (SelectedMonitorDevice == null) SelectedMonitorDevice = "";
             if (ActiveWallpaperId == null) ActiveWallpaperId = "";
+            if (SpanWallpaperId == null) SpanWallpaperId = "";
+            if (DismissedUpdateVersion == null) DismissedUpdateVersion = "";
+            if (LatestKnownVersion == null) LatestKnownVersion = "";
+            if (LatestReleaseUrl == null) LatestReleaseUrl = "";
+            if (LatestReleaseNotes == null) LatestReleaseNotes = "";
+
+            NormalizeMonitorLayout();
 
             if (!Enum.IsDefined(typeof(VisualizerStyle), VisualizerStyle)) VisualizerStyle = VisualizerStyle.Bars;
             if (!Enum.IsDefined(typeof(VisualizerAnchor), VisualizerAnchor)) VisualizerAnchor = VisualizerAnchor.BottomCenter;
@@ -133,6 +194,72 @@ namespace FluxWall.Settings
             VisualizerX = Clamp(VisualizerX, -20000, 20000, 0);
             VisualizerY = Clamp(VisualizerY, -20000, 20000, 0);
             if (!IsValidVisualizerColor(VisualizerColor)) VisualizerColor = DefaultVisualizerColor;
+        }
+
+        /// <summary>
+        /// Repairs the 1.3.0 layout fields and migrates 1.2.x settings. Upgraded
+        /// users get SameAll with their existing single wallpaper and monitor
+        /// choice, which is exactly what 1.2.3 did.
+        /// </summary>
+        void NormalizeMonitorLayout()
+        {
+            if (MonitorAssignments == null) MonitorAssignments = new List<MonitorAssignment>();
+            if (SpanMonitors == null) SpanMonitors = new List<string>();
+
+            if (!Enum.IsDefined(typeof(DisplayMode), DisplayMode)) DisplayMode = DisplayMode.SameAll;
+            if (!Enum.IsDefined(typeof(SpanFit), SpanFit)) SpanFit = SpanFit.Stretch;
+
+            // Drop junk entries and keep the first choice for a monitor key, so a
+            // hand-edited file cannot produce two wallpapers for one screen.
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var clean = new List<MonitorAssignment>();
+            foreach (var a in MonitorAssignments)
+            {
+                if (a == null) continue;
+                var key = (a.MonitorKey ?? "").Trim();
+                if (key.Length == 0 || !seen.Add(key)) continue;
+                clean.Add(new MonitorAssignment { MonitorKey = key, WallpaperId = a.WallpaperId ?? "" });
+            }
+            MonitorAssignments = clean;
+
+            var spanSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var span = new List<string>();
+            foreach (var k in SpanMonitors)
+            {
+                var key = (k ?? "").Trim();
+                if (key.Length > 0 && spanSeen.Add(key)) span.Add(key);
+            }
+            SpanMonitors = span;
+
+            // 0 → 1: nothing to convert beyond the defaults above (SameAll plus the
+            // saved ActiveWallpaperId reproduces 1.2.x behaviour exactly).
+            if (SettingsSchema < 1) SettingsSchema = 1;
+        }
+
+        /// <summary>Saved wallpaper for one monitor, or an empty string.</summary>
+        public string AssignmentFor(string monitorKey)
+        {
+            if (string.IsNullOrEmpty(monitorKey) || MonitorAssignments == null) return "";
+            foreach (var a in MonitorAssignments)
+                if (a != null && string.Equals(a.MonitorKey, monitorKey, StringComparison.OrdinalIgnoreCase))
+                    return a.WallpaperId ?? "";
+            return "";
+        }
+
+        /// <summary>Stores (or clears, with an empty id) one monitor's wallpaper.</summary>
+        public void Assign(string monitorKey, string wallpaperId)
+        {
+            if (string.IsNullOrEmpty(monitorKey)) return;
+            if (MonitorAssignments == null) MonitorAssignments = new List<MonitorAssignment>();
+            foreach (var a in MonitorAssignments)
+            {
+                if (a != null && string.Equals(a.MonitorKey, monitorKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    a.WallpaperId = wallpaperId ?? "";
+                    return;
+                }
+            }
+            MonitorAssignments.Add(new MonitorAssignment { MonitorKey = monitorKey, WallpaperId = wallpaperId ?? "" });
         }
 
         public const int MinVisualizerOpacity = 10;

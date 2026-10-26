@@ -142,7 +142,8 @@ namespace FluxWall.UI
             };
 
             s.Children.Add(Theme.SettingsRow("Show wallpaper on",
-                "Pick a monitor, or spread it across every display.", monitorCombo));
+                "Pick a monitor, or spread it across every display. For a different video on each " +
+                "screen, or one video spanning several screens, use the Displays page.", monitorCombo));
 
             // Scaling
             var scalingCombo = new ComboBox { MinWidth = 220, FontSize = 13 };
@@ -277,6 +278,20 @@ namespace FluxWall.UI
             };
             s.Children.Add(Theme.SettingsRow("Restore wallpaper on startup",
                 "Replay your last applied wallpaper when VulcansLivingWP launches.", restoreToggle));
+
+            var updateToggle = new ToggleSwitch { IsOn = _app.Settings.CheckForUpdates };
+            updateToggle.Toggled += () =>
+            {
+                _app.Settings.CheckForUpdates = updateToggle.IsOn;
+                SettingsStore.Save();
+                // Turning it back on should not require restarting the app.
+                if (updateToggle.IsOn && Updates.UpdateService.Last == null)
+                    Updates.UpdateService.StartupCheck(null);
+            };
+            s.Children.Add(Theme.SettingsRow("Check for updates",
+                "Asks GitHub for the latest stable release in the background, at most once every " +
+                "12 hours. Nothing is downloaded or installed automatically; the About page shows " +
+                "the result and a link to the release.", updateToggle));
 
             var trayToggle = new ToggleSwitch { IsOn = _app.Settings.ShowTrayIcon };
             trayToggle.Toggled += () =>

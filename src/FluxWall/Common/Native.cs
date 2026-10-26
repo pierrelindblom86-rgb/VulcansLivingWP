@@ -176,6 +176,33 @@ namespace FluxWall.Common
         [DllImport("user32.dll")]
         public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
 
+        /// <summary>
+        /// Monitor description used for stable display identification. DeviceID is
+        /// the PnP device interface path (monitor model + connector), which stays
+        /// the same across reboots and enumeration-order changes.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct DISPLAY_DEVICE
+        {
+            public int cb;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string DeviceName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceString;
+            public int StateFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceID;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceKey;
+        }
+
+        public const uint EDD_GET_DEVICE_INTERFACE_NAME = 0x00000001;
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EnumDisplayDevices(string device, uint deviceNumber,
+            ref DISPLAY_DEVICE displayDevice, uint flags);
+
         public delegate bool MonitorEnumProc(IntPtr monitor, IntPtr dc, ref RECT rect, IntPtr data);
 
         [DllImport("user32.dll")]

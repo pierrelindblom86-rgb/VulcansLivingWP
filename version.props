@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    Single source of truth for the VulcansLivingWP version.
+
+    Change ONLY VulcanVersion here when preparing a release. It flows into:
+      • the assembly / file / informational version of VulcansLivingWP.exe
+      • the in-app version (AppVersion reads the assembly metadata)
+      • the log header
+      • the installer, which reads the built exe's file version
+      • the GitHub update checker, which compares against AppVersion
+
+    docs/RELEASING.md describes the full release procedure.
+  -->
+  <PropertyGroup>
+    <VulcanVersion>1.3.0</VulcanVersion>
+  </PropertyGroup>
+
+</Project>

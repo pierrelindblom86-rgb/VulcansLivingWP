@@ -35,19 +35,49 @@ namespace FluxWall.Engine
         public IntPtr MonitorHandle { get { return _monitor.Handle; } }
         public WallpaperItem Item { get { return _item; } }
         public string MonitorName { get { return _monitor.DeviceName; } }
+        /// <summary>True when this surface covers several monitors as one picture.</summary>
+        public bool IsSpan { get { return _isSpan; } }
         public bool Visible { get; private set; }
         /// <summary>True once the window has been moved under the desktop icons.</summary>
         public bool IsParented { get; private set; }
         /// <summary>True when the decoder reported an opened video for this surface.</summary>
         public bool HasFirstFrame { get; private set; }
         public bool Failed { get { return _unableToPlay; } }
+        /// <summary>Screen rectangle this surface occupies, in desktop pixels.</summary>
+        public Native.RECT MonitorRect { get { return _monitor.ScreenRect; } }
+        /// <summary>Playback position of this surface (used by the layout tests).</summary>
+        public TimeSpan Position { get { return _media != null ? _media.Position : TimeSpan.Zero; } }
+        public TimeSpan Duration
+        {
+            get
+            {
+                try
+                {
+                    return _media != null && _media.NaturalDuration.HasTimeSpan
+                        ? _media.NaturalDuration.TimeSpan
+                        : TimeSpan.Zero;
+                }
+                catch { return TimeSpan.Zero; }
+            }
+        }
 
         /// <summary>Raised once the video has opened on this surface.</summary>
         public event Action Opened;
         /// <summary>Raised if Media Foundation reports the file cannot be played.</summary>
         public event Action<WallpaperItem, string> MediaFailed;
 
+        readonly bool _isSpan;
+
         public WallpaperWindow(WallpaperItem item, AppSettings settings, MonitorInfoLite monitor)
+            : this(item, settings, monitor, false)
+        {
+        }
+
+        /// <param name="isSpan">
+        /// True for the single surface that covers several monitors at once. It
+        /// uses the span fit setting instead of the per-monitor scaling mode.
+        /// </param>
+        public WallpaperWindow(WallpaperItem item, AppSettings settings, MonitorInfoLite monitor, bool isSpan)
         {
             if (item == null) throw new ArgumentNullException("item");
             if (monitor == null) throw new ArgumentNullException("monitor");
@@ -55,6 +85,7 @@ namespace FluxWall.Engine
             _item = item;
             _settings = settings ?? new AppSettings();
             _monitor = monitor;
+            _isSpan = isSpan;
 
             _media = new MediaElement
             {
@@ -492,6 +523,18 @@ namespace FluxWall.Engine
         {
             if (_closed || _media == null) return;
             _media.RenderTransform = Transform.Identity;
+
+            // A span surface covers the whole combined desktop, so it is fitted
+            // as one picture: stretching distorts, preserving keeps the video's
+            // aspect ratio and leaves black bars in the unused area.
+            if (_isSpan)
+            {
+                _media.Stretch = _settings.SpanFit == SpanFit.PreserveAspect
+                    ? Stretch.Uniform
+                    : Stretch.Fill;
+                return;
+            }
+
             switch (_settings.Scaling)
             {
                 case ScalingMode.Stretch: _media.Stretch = Stretch.Fill; break;
@@ -515,11 +558,25 @@ namespace FluxWall.Engine
         public Native.RECT ScreenRect;
         public bool IsPrimary;
         public string DeviceName;
+
+        /// <summary>Stable identity (PnP monitor path, or the GDI name as fallback).</summary>
+        public string Key = "";
+
+        /// <summary>"Generic PnP Monitor" style description, may be empty.</summary>
+        public string FriendlyName = "";
+
+        public int Width { get { return Math.Abs(ScreenRect.Right - ScreenRect.Left); } }
+        public int Height { get { return Math.Abs(ScreenRect.Bottom - ScreenRect.Top); } }
+
+        /// <summary>Short label for lists: "Monitor 1 · 1920×1080 (Primary)".</summary>
+        public string Label
+        {
+            get { return (DeviceName ?? "Monitor") + "  ·  " + Width + "×" + Height + (IsPrimary ? "  (Primary)" : ""); }
+        }
+
         public override string ToString()
         {
-            var w = Math.Abs(ScreenRect.Right - ScreenRect.Left);
-            var h = Math.Abs(ScreenRect.Bottom - ScreenRect.Top);
-            return DeviceName + "  " + w + "×" + h + (IsPrimary ? "  (Primary)" : "");
+            return DeviceName + "  " + Width + "×" + Height + (IsPrimary ? "  (Primary)" : "");
         }
     }
 }

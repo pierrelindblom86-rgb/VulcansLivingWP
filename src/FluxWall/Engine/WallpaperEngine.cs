@@ -32,24 +32,27 @@ namespace FluxWall.Engine
 
         List<WallpaperWindow> _windows = new List<WallpaperWindow>();
         List<WallpaperWindow> _incoming;
-        WallpaperItem _incomingItem;
+        WallpaperPlan _incomingPlan;
         string _incomingTopology = "";
-        WallpaperItem _requestedItem;
+        WallpaperPlan _requestedPlan;
         int _retryCount;
 
         IntPtr _workerHost;
-        string _appliedTopology = "";
+        string _appliedSignature = "";
+
+        /// <summary>Plan that is currently on screen (null while nothing plays).</summary>
+        WallpaperPlan _appliedPlan;
         readonly DispatcherTimer _recoveryTimer;
         readonly DispatcherTimer _autoSwitchTimer;
         readonly DispatcherTimer _swapTimer;
         readonly DispatcherTimer _displayTimer;
         readonly DispatcherTimer _retryTimer;
         readonly ScreenStateMonitor _screen = new ScreenStateMonitor();
-        WallpaperItem _retryItem;
+        WallpaperPlan _retryPlan;
         readonly Random _random = new Random();
         string _previousWallpaperId = "";
 
-        string _lastRequestItemId = "";
+        string _lastRequestSignature = "";
         DateTime _lastRequestUtc = DateTime.MinValue;
 
         bool _manualPaused;
@@ -122,10 +125,10 @@ namespace FluxWall.Engine
             _retryTimer.Tick += (s, e) =>
             {
                 _retryTimer.Stop();
-                var item = _retryItem;
-                _retryItem = null;
-                if (item == null || _windows.Count > 0) return;
-                StartSwap(item);
+                var plan = _retryPlan;
+                _retryPlan = null;
+                if (plan == null || _windows.Count > 0) return;
+                StartSwap(plan);
             };
         }
 
@@ -161,6 +164,101 @@ namespace FluxWall.Engine
         }
 
         /// <summary>
+        /// Applies <paramref name="item"/> according to the current display mode:
+        /// same-all and span change the one video on screen, while independent mode
+        /// assigns it to the primary monitor only, so other monitors keep theirs.
+        /// </summary>
+        public void ApplyItemForCurrentMode(WallpaperItem item)
+        {
+            if (item == null) return;
+            RunOnUi(() =>
+            {
+                if (item.IsMissing) { Logger.Warn("Activation skipped, file is missing: " + item.FilePath); return; }
+
+                switch (_settings.DisplayMode)
+                {
+                    case DisplayMode.Independent:
+                        var primary = MonitorService.Primary(MonitorService.All());
+                        if (primary != null)
+                        {
+                            _settings.Assign(primary.Key, item.Id);
+                            Logger.Info("Independent mode: assigned '" + item.FilePath +
+                                        "' to " + primary.DeviceName + ".");
+                        }
+                        _settings.ActiveWallpaperId = item.Id;
+                        break;
+
+                    case DisplayMode.Span:
+                        _settings.SpanWallpaperId = item.Id;
+                        _settings.ActiveWallpaperId = item.Id;
+                        break;
+
+                    default:
+                        _settings.ActiveWallpaperId = item.Id;
+                        break;
+                }
+                SettingsStore.Save();
+                StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()));
+            });
+        }
+
+        /// <summary>Assigns a video to one monitor (Independent mode).</summary>
+        public void AssignToMonitor(WallpaperItem item, string monitorKey)
+        {
+            RunOnUi(() =>
+            {
+                _settings.Assign(monitorKey, item != null ? item.Id : "");
+                if (item != null) _settings.ActiveWallpaperId = item.Id;
+                SettingsStore.Save();
+                StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()));
+            });
+        }
+
+        /// <summary>Clears one monitor's assignment without touching the others.</summary>
+        public void ClearMonitor(string monitorKey)
+        {
+            RunOnUi(() =>
+            {
+                _settings.Assign(monitorKey, "");
+                SettingsStore.Save();
+                StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()));
+            });
+        }
+
+        /// <summary>Switches display mode, keeping every saved assignment intact.</summary>
+        public void SetDisplayMode(DisplayMode mode)
+        {
+            RunOnUi(() =>
+            {
+                if (_settings.DisplayMode == mode) return;
+                _settings.DisplayMode = mode;
+                SettingsStore.Save();
+                Logger.Info("Display mode changed to " + mode + " (saved assignments are kept).");
+                StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()));
+            });
+        }
+
+        /// <summary>Sets which monitors span mode uses (empty = all monitors).</summary>
+        public void SetSpanMonitors(IEnumerable<string> monitorKeys)
+        {
+            RunOnUi(() =>
+            {
+                _settings.SpanMonitors = monitorKeys != null
+                    ? new List<string>(monitorKeys)
+                    : new List<string>();
+                SettingsStore.Save();
+                if (_settings.DisplayMode == DisplayMode.Span)
+                    StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()));
+            });
+        }
+
+        /// <summary>Rebuilds and applies the plan for the current settings.</summary>
+        public void ApplyCurrentLayout()
+        {
+            RunOnUi(() => StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()), true));
+        }
+
+        /// <summary>
         /// Activates <paramref name="item"/>. Unless <paramref name="force"/> is
         /// set, a request for the wallpaper that is already playing and healthy
         /// is ignored — that is what makes a double-click, a repeated tray
@@ -177,59 +275,93 @@ namespace FluxWall.Engine
                     return;
                 }
 
+                // Assign first: the plan is derived from the settings, so this is
+                // the single place that decides what each mode should store.
+                switch (_settings.DisplayMode)
+                {
+                    case DisplayMode.Independent:
+                        var primary = MonitorService.Primary(MonitorService.All());
+                        if (primary != null) _settings.Assign(primary.Key, item.Id);
+                        _settings.ActiveWallpaperId = item.Id;
+                        break;
+                    case DisplayMode.Span:
+                        _settings.SpanWallpaperId = item.Id;
+                        _settings.ActiveWallpaperId = item.Id;
+                        break;
+                    default:
+                        _settings.ActiveWallpaperId = item.Id;
+                        break;
+                }
+
+                var plan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
                 if (!force)
                 {
-                    if (Current != null && Current.Id == item.Id && AllWindowsHealthy())
+                    if (string.Equals(plan.Signature, _appliedSignature, StringComparison.Ordinal) && AllWindowsHealthy())
                     {
                         Logger.Info("Wallpaper already active; ignoring duplicate activation of '" + item.FilePath + "'.");
+                        SettingsStore.Save();
                         return;
                     }
-                    if (_lastRequestItemId == item.Id &&
+                    if (string.Equals(plan.Signature, _lastRequestSignature, StringComparison.Ordinal) &&
                         (DateTime.UtcNow - _lastRequestUtc) < DuplicateWindow)
                     {
                         Logger.Info("Ignoring repeated activation request for '" + item.FilePath + "'.");
+                        SettingsStore.Save();
                         return;
                     }
-                    if (_incomingItem != null && _incomingItem.Id == item.Id)
+                    if (_incomingPlan != null && string.Equals(_incomingPlan.Signature, plan.Signature, StringComparison.Ordinal))
                     {
                         Logger.Info("Activation for '" + item.FilePath + "' is already in progress.");
+                        SettingsStore.Save();
                         return;
                     }
                 }
 
-                _lastRequestItemId = item.Id;
+                _lastRequestSignature = plan.Signature;
                 _lastRequestUtc = DateTime.UtcNow;
-                StartSwap(item);
+                SettingsStore.Save();
+                StartSwap(plan);
             });
         }
 
         /// <summary>Creates the new surfaces; the previous wallpaper keeps playing until they are ready.</summary>
-        void StartSwap(WallpaperItem item)
+        void StartSwap(WallpaperPlan plan)
+        {
+            StartSwap(plan, false);
+        }
+
+        void StartSwap(WallpaperPlan plan, bool force)
         {
             CancelIncoming("a new wallpaper was requested");
-            _requestedItem = item;
+            _requestedPlan = plan;
+
+            if (plan == null || plan.IsEmpty)
+            {
+                Logger.Warn("Nothing to apply: " + (plan != null && plan.Note.Length > 0 ? plan.Note : "no usable wallpaper for this layout.") +
+                            (_windows.Count > 0 ? " Keeping the current wallpaper." : " The desktop stays as it is."));
+                return;
+            }
+
+            if (!force && string.Equals(plan.Signature, _appliedSignature, StringComparison.Ordinal) && AllWindowsHealthy())
+            {
+                Logger.Info("Layout is already on screen; nothing to change. " + plan);
+                return;
+            }
 
             var host = WorkerWInjector.GetWallpaperHost();
             if (host == IntPtr.Zero)
             {
-                Logger.Warn("Cannot activate '" + item.FilePath + "': the desktop wallpaper layer is unavailable. " +
+                Logger.Warn("Cannot activate the wallpaper: the desktop wallpaper layer is unavailable. " +
                             (_windows.Count > 0 ? "Keeping the current wallpaper." : "The desktop stays as it is."));
                 return;
             }
 
-            var monitors = MonitorService.Resolve(_settings, MonitorService.All());
-            if (monitors.Count == 0)
-            {
-                Logger.Warn("Cannot activate '" + item.FilePath + "': no monitors were enumerated.");
-                return;
-            }
-
             var incoming = new List<WallpaperWindow>();
-            foreach (var m in monitors)
+            foreach (var spec in plan.Surfaces)
             {
                 try
                 {
-                    var w = new WallpaperWindow(item, _settings, m);
+                    var w = new WallpaperWindow(spec.Item, _settings, spec.Monitor, spec.IsSpan);
                     w.MediaFailed += OnWindowFailed;
                     w.Opened += OnWindowOpened;
                     w.SetEnvironmentPaused(_environmentPaused);
@@ -238,24 +370,23 @@ namespace FluxWall.Engine
                 }
                 catch (Exception e)
                 {
-                    Logger.Error(new Exception("Creating the wallpaper surface for " + m + " failed", e));
+                    Logger.Error(new Exception("Creating the wallpaper surface for " + spec.Describe() + " failed", e));
                 }
             }
 
             if (incoming.Count == 0)
             {
-                Logger.Warn("No monitor could host '" + item.FilePath + "'; " +
+                Logger.Warn("No surface could be hosted; " +
                             (_windows.Count > 0 ? "keeping the current wallpaper." : "nothing is playing."));
                 return;
             }
 
             _workerHost = host;
             _incoming = incoming;
-            _incomingItem = item;
-            _incomingTopology = MonitorService.Signature(monitors);
+            _incomingPlan = plan;
+            _incomingTopology = plan.Signature;
 
-            Logger.Info("Wallpaper loading: " + item.FilePath + " on " + incoming.Count +
-                        " monitor(s); the previous wallpaper stays until the first frame.");
+            Logger.Info("Wallpaper loading: " + plan + " ; the previous wallpaper stays until the first frame.");
 
             // A surface can already have a frame (fast decoder); commit at once.
             if (TryCommit()) return;
@@ -285,10 +416,10 @@ namespace FluxWall.Engine
             _swapTimer.Stop();
 
             var incoming = _incoming;
-            var item = _incomingItem;
+            var plan = _incomingPlan;
             var topology = _incomingTopology;
             _incoming = null;
-            _incomingItem = null;
+            _incomingPlan = null;
             _incomingTopology = "";
 
             var previous = Current;
@@ -297,12 +428,15 @@ namespace FluxWall.Engine
 
             foreach (var w in retired) DisposeWindow(w);
 
-            if (previous != null && previous.Id != item.Id) _previousWallpaperId = previous.Id;
+            var item = plan != null ? plan.PrimaryItem : null;
+            if (previous != null && item != null && previous.Id != item.Id) _previousWallpaperId = previous.Id;
 
-            _appliedTopology = topology;
+            _appliedSignature = topology;
+            _appliedPlan = plan;
             _retryCount = 0;
             Current = item;
-            _settings.ActiveWallpaperId = item.Id;
+            if (item != null && plan != null && plan.Mode != DisplayMode.Independent)
+                _settings.ActiveWallpaperId = item.Id;
             SettingsStore.Save();
 
             foreach (var w in _windows) w.ShowSurface();
@@ -311,7 +445,8 @@ namespace FluxWall.Engine
             var h = WallpaperApplied;
             if (h != null) h(item);
 
-            Logger.Info("Wallpaper set: " + item.FilePath + " on " + _windows.Count + " monitor(s).");
+            Logger.Info("Wallpaper set: " + (plan != null ? plan.ToString() : "?") +
+                        " on " + _windows.Count + " surface(s).");
 
             // One collection after the decoders are released keeps long switch
             // sessions from holding native buffers, without stalling the commit.
@@ -338,15 +473,15 @@ namespace FluxWall.Engine
                 return;
             }
 
-            var item = _incomingItem;
-            Logger.Warn("Wallpaper '" + (item != null ? item.FilePath : "?") +
-                        "' produced no frame within " + SwapTimeout.TotalSeconds + "s; keeping the previous wallpaper.");
+            var failed = _incomingPlan;
+            Logger.Warn("The new layout produced no frame within " + SwapTimeout.TotalSeconds +
+                        "s; keeping the previous wallpaper. " + (failed != null ? failed.ToString() : ""));
             CancelIncoming("the new wallpaper did not start");
 
-            if (item != null && _windows.Count > 0 && _retryCount < 2)
+            if (failed != null && _windows.Count > 0 && _retryCount < 2)
             {
                 _retryCount++;
-                _retryItem = item;
+                _retryPlan = failed;
                 Logger.Info("Retrying that wallpaper once (attempt " + _retryCount + ").");
                 _retryTimer.Start();
             }
@@ -358,7 +493,7 @@ namespace FluxWall.Engine
             if (_incoming == null) return;
             var pending = _incoming;
             _incoming = null;
-            _incomingItem = null;
+            _incomingPlan = null;
             _incomingTopology = "";
             foreach (var w in pending) DisposeWindow(w);
             Logger.Info("Cancelled the pending wallpaper activation (" + reason + ").");
@@ -379,11 +514,12 @@ namespace FluxWall.Engine
                 _autoSwitchTimer.Stop();
                 CancelIncoming("the wallpaper was stopped");
                 _previousWallpaperId = "";
-                _requestedItem = null;
+                _requestedPlan = null;
+                _appliedPlan = null;
                 _retryCount = 0;
                 foreach (var w in _windows) DisposeWindow(w);
                 _windows.Clear();
-                _appliedTopology = "";
+                _appliedSignature = "";
                 Current = null;
                 _settings.ActiveWallpaperId = "";
                 SettingsStore.Save();
@@ -393,16 +529,20 @@ namespace FluxWall.Engine
             });
         }
 
-        /// <summary>Re-applies the SAME item (display change, Explorer restart, settings).</summary>
+        /// <summary>
+        /// Re-applies the current layout (display change, Explorer restart, settings).
+        /// The plan is rebuilt from the settings, so a display change picks up the
+        /// new monitor geometry instead of replaying stale rectangles.
+        /// </summary>
         public void Reapply()
         {
             RunOnUi(() =>
             {
-                if (Current == null) return;
-                var item = Current;
+                if (Current == null && _appliedPlan == null) return;
+                var plan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
                 // Deferred so a caller inside a timer/dispatcher callback can
                 // never re-enter the engine while it is closing windows.
-                _dispatcher.BeginInvoke((Action)(() => Apply(item, true)), DispatcherPriority.Background);
+                _dispatcher.BeginInvoke((Action)(() => StartSwap(plan, true)), DispatcherPriority.Background);
             });
         }
 
@@ -436,28 +576,27 @@ namespace FluxWall.Engine
                 {
                     if (Current == null)
                     {
-                        if (_requestedItem != null && _windows.Count == 0) StartSwap(_requestedItem);
+                        if (_requestedPlan != null && _windows.Count == 0) StartSwap(_requestedPlan);
                         return;
                     }
 
                     bool hostGone = _workerHost == IntPtr.Zero ||
                                     !Native.IsWindow(_workerHost) ||
                                     Native.WindowClass(_workerHost) != "WorkerW";
-                    var signature = MonitorService.Signature(
-                        MonitorService.Resolve(_settings, MonitorService.All()));
+                    var plan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
                     // While a swap is in flight, compare against the layout it
                     // is being built for. Comparing against the committed one
                     // made every display notification cancel and restart the
                     // pending activation.
-                    var baseline = _incoming != null ? _incomingTopology : _appliedTopology;
-                    bool layoutChanged = signature.Length > 0 &&
-                                         !string.Equals(signature, baseline, StringComparison.Ordinal);
+                    var baseline = _incoming != null ? _incomingTopology : _appliedSignature;
+                    bool layoutChanged = plan.Signature.Length > 0 &&
+                                         !string.Equals(plan.Signature, baseline, StringComparison.Ordinal);
 
                     if (hostGone || layoutChanged || _windows.Count == 0)
                     {
                         Logger.Info("Rebuilding the wallpaper after a display/shell change (hostGone=" +
                                     hostGone + ", layoutChanged=" + layoutChanged +
-                                    ", windows=" + _windows.Count + ").");
+                                    ", surfaces=" + _windows.Count + ").");
                         Reapply();
                         return;
                     }
@@ -637,8 +776,9 @@ namespace FluxWall.Engine
         void OnWindowFailed(WallpaperItem item, string message)
         {
             // A failed NEW surface must not replace a working wallpaper.
-            if (_incoming != null && _incoming.Count > 0 && _incomingItem != null &&
-                item != null && _incomingItem.Id == item.Id)
+            if (_incoming != null && _incoming.Count > 0 && _incomingPlan != null &&
+                item != null && _incomingPlan.PrimaryItem != null &&
+                _incomingPlan.PrimaryItem.Id == item.Id)
             {
                 CancelIncoming("decoding failed for the new wallpaper");
             }
@@ -663,13 +803,14 @@ namespace FluxWall.Engine
                 // few times instead of leaving the user with an empty desktop.
                 if (_windows.Count == 0)
                 {
-                    if (_incoming == null && _requestedItem != null &&
-                        !_requestedItem.IsMissing && _retryCount < HowManyRetriesWhenNothingIsShowing)
+                    if (_incoming == null && _retryCount < HowManyRetriesWhenNothingIsShowing)
                     {
+                        var retryPlan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
+                        if (retryPlan.IsEmpty) return;
                         _retryCount++;
                         Logger.Info("Retrying wallpaper activation (attempt " + _retryCount + " of " +
                                     HowManyRetriesWhenNothingIsShowing + ").");
-                        StartSwap(_requestedItem);
+                        StartSwap(retryPlan);
                     }
                     return;
                 }
@@ -688,15 +829,16 @@ namespace FluxWall.Engine
                     return;
                 }
 
-                // 2. Display layout changed? Compare against the topology this
-                // wallpaper was actually applied to. Comparing against the live
+                // 2. Display layout (or the assignments) changed? Compare against
+                // the plan that is actually on screen. Comparing against the live
                 // windows used to re-apply forever whenever one surface failed,
                 // which showed up as repeated identical activations.
-                var want = MonitorService.Resolve(_settings, MonitorService.All());
-                var signature = MonitorService.Signature(want);
-                if (signature.Length > 0 && !string.Equals(signature, _appliedTopology, StringComparison.Ordinal))
+                var plan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
+                if (plan.Signature.Length > 0 &&
+                    !string.Equals(plan.Signature, _appliedSignature, StringComparison.Ordinal))
                 {
-                    Logger.Info("Display layout changed; re-applying wallpaper. was=[" + _appliedTopology + "] now=[" + signature + "]");
+                    Logger.Info("Display layout changed; re-applying wallpaper. was=[" +
+                                _appliedSignature + "] now=[" + plan.Signature + "]");
                     Reapply();
                 }
             }
@@ -770,7 +912,7 @@ namespace FluxWall.Engine
                 try { _swapTimer.Stop(); } catch { }
                 try { _displayTimer.Stop(); } catch { }
                 try { _retryTimer.Stop(); } catch { }
-                _retryItem = null;
+                _retryPlan = null;
                 try { Watcher.Dispose(); } catch { }
                 try { _screen.Dispose(); } catch { }
                 CancelIncoming("the application is closing");

@@ -28,9 +28,10 @@ namespace FluxWall.UI
         TextBlock _stateChip;
         Border _stateDot;
         LibraryPage _library;
+        DisplaysPage _displays;
         SettingsPage _settingsPage;
         AboutPage _about;
-        Button _navLibrary, _navSettings, _navAbout;
+        Button _navLibrary, _navDisplays, _navSettings, _navAbout;
 
         public MainWindow(FluxWallApp app)
         {
@@ -136,7 +137,11 @@ namespace FluxWall.UI
                 handled = false;
                 Logger.Info(string.Format("WM_DISPLAYCHANGE received (msg=0x{0:X4}, w=0x{1:X}, l=0x{2:X}).",
                     msg, wParam.ToInt64(), lParam.ToInt64()));
-                try { _app?.Engine?.OnDisplayConfigurationChanged(); }
+                try
+                {
+                    _app?.Engine?.OnDisplayConfigurationChanged();
+                    _displays?.Refresh();
+                }
                 catch (Exception ex) { Logger.Error(ex); }
             }
             return IntPtr.Zero;
@@ -311,9 +316,11 @@ namespace FluxWall.UI
             var panel = new StackPanel { Margin = new Thickness(14, 18, 14, 14) };
 
             _navLibrary = NavButton("Library", true);
+            _navDisplays = NavButton("Displays", false);
             _navSettings = NavButton("Settings", false);
             _navAbout = NavButton("About", false);
             panel.Children.Add(_navLibrary);
+            panel.Children.Add(_navDisplays);
             panel.Children.Add(_navSettings);
             panel.Children.Add(_navAbout);
 
@@ -354,6 +361,7 @@ namespace FluxWall.UI
             b.Click += (s, e) =>
             {
                 if (text == "Library") Navigate(Page.Library);
+                else if (text == "Displays") Navigate(Page.Displays);
                 else if (text == "Settings") Navigate(Page.Settings);
                 else Navigate(Page.About);
             };
@@ -361,7 +369,7 @@ namespace FluxWall.UI
         }
 
         #region Pages
-        public enum Page { Library, Settings, About }
+        public enum Page { Library, Displays, Settings, About }
 
         public void Navigate(Page page)
         {
@@ -369,6 +377,12 @@ namespace FluxWall.UI
             {
                 case Page.Library:
                     _pageHost.Content = _library.Content;
+                    break;
+                case Page.Displays:
+                    // Rebuild on every visit: monitors may have changed while the
+                    // page was hidden, and showing stale rows invites mistakes.
+                    _displays.Refresh();
+                    _pageHost.Content = _displays.Content;
                     break;
                 case Page.Settings:
                     _pageHost.Content = _settingsPage.Content;
@@ -383,6 +397,7 @@ namespace FluxWall.UI
         void Highlight(Page page)
         {
             SetNav(_navLibrary, page == Page.Library);
+            SetNav(_navDisplays, page == Page.Displays);
             SetNav(_navSettings, page == Page.Settings);
             SetNav(_navAbout, page == Page.About);
         }
@@ -399,6 +414,7 @@ namespace FluxWall.UI
         public void Init(FluxWallApp app)
         {
             _library = new LibraryPage(app, _win);
+            _displays = new DisplaysPage(app);
             _settingsPage = new SettingsPage(app);
             _about = new AboutPage(app);
             UpdateStateChip();
@@ -443,6 +459,7 @@ namespace FluxWall.UI
                 {
                     UpdateStateChip();
                     _library?.RefreshCards();
+                    _displays?.Refresh();
                 });
             }
             catch { }
@@ -455,6 +472,7 @@ namespace FluxWall.UI
                 _win.Dispatcher.Invoke(() =>
                 {
                     _library?.RefreshCards();
+                    _displays?.Refresh();
                     UpdateStateChip();
                 });
             }

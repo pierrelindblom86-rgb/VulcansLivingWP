@@ -2,11 +2,17 @@
 ; Build with: ISCC.exe installer\setup.iss
 
 #define AppName "VulcansLivingWP"
-#define AppVersion "1.2.3"
 #define AppPublisher "VulcansLivingWP"
 #define AppExe "VulcansLivingWP.exe"
 ; The project folder keeps its original name; only the executable was renamed.
 #define BuildDir "..\src\FluxWall\bin\Release\net48"
+; Read the version from the freshly built exe, whose file version comes from
+; version.props. Nothing is typed twice, so the installer cannot drift from
+; the application. Build the app before compiling this script.
+#define AppVersion GetFileVersion(AddBackslash(SourcePath) + BuildDir + "\" + AppExe)
+#if AppVersion == ""
+  #error Build src\FluxWall first: the installer reads its version from VulcansLivingWP.exe.
+#endif
 
 [Setup]
 AppId={{D9A6C9EA-7B4F-4D9E-8B6A-0F17E4B7E58A}
@@ -268,10 +274,24 @@ begin
 
   if CurUninstallStep = usPostUninstall then
   begin
-    if DirExists(ExpandConstant('{localappdata}\VulcansLivingWP')) and
-       (MsgBox('Delete VulcansLivingWP settings, cached thumbnails and logs?' + #13#10 +
-                'Your original video files are never touched.',
-                mbConfirmation, MB_YESNO) = IDYES) then
-      DelTree(ExpandConstant('{localappdata}\VulcansLivingWP'), True, True, True);
+    { User data is only ever deleted on an explicit answer.
+      A silent uninstall (/VERYSILENT, used by upgrades, scripts and the
+      automated release checks) keeps the library, settings, thumbnails and
+      logs unless /DELETEUSERDATA=1 is passed on purpose. Before 1.3.0 the
+      suppressed confirmation counted as "yes" and silently wiped them. }
+    if DirExists(ExpandConstant('{localappdata}\VulcansLivingWP')) then
+    begin
+      if WizardSilent then
+      begin
+        if ExpandConstant('{param:DELETEUSERDATA|0}') = '1' then
+          DelTree(ExpandConstant('{localappdata}\VulcansLivingWP'), True, True, True);
+      end
+      else if MsgBox('Delete VulcansLivingWP settings, cached thumbnails and logs?' + #13#10 +
+                     'Your original video files are never touched.',
+                     mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+      begin
+        DelTree(ExpandConstant('{localappdata}\VulcansLivingWP'), True, True, True);
+      end;
+    end;
   end;
 end;

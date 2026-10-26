@@ -47,6 +47,50 @@ namespace FluxWall
                 Environment.Exit(Visualizer.VisualizerSelfTest.Run(testDir));
             }
 
+            // Automated update-checker verification (see docs/UPDATES.md). Also runs
+            // before the single-instance mutex and uses its own settings copy.
+            string updateTestDir = null;
+            bool runUpdateTest = false;
+            foreach (var raw in args ?? new string[0])
+            {
+                if (raw == null) continue;
+                if (raw.Equals("--update-test", StringComparison.OrdinalIgnoreCase))
+                {
+                    runUpdateTest = true;
+                }
+                else if (raw.StartsWith("--update-test=", StringComparison.OrdinalIgnoreCase))
+                {
+                    runUpdateTest = true;
+                    updateTestDir = raw.Substring("--update-test=".Length).Trim('"');
+                }
+            }
+            if (runUpdateTest)
+            {
+                Environment.Exit(Updates.UpdateSelfTest.Run(updateTestDir));
+            }
+
+            // Multi-monitor layout verification (see docs/TESTING.md). Uses the
+            // real desktop layer and its own settings copy.
+            string layoutTestDir = null;
+            bool runLayoutTest = false;
+            foreach (var raw in args ?? new string[0])
+            {
+                if (raw == null) continue;
+                if (raw.Equals("--layout-test", StringComparison.OrdinalIgnoreCase))
+                {
+                    runLayoutTest = true;
+                }
+                else if (raw.StartsWith("--layout-test=", StringComparison.OrdinalIgnoreCase))
+                {
+                    runLayoutTest = true;
+                    layoutTestDir = raw.Substring("--layout-test=".Length).Trim('"');
+                }
+            }
+            if (runLayoutTest)
+            {
+                Environment.Exit(Engine.LayoutSelfTest.Run(layoutTestDir));
+            }
+
             // The installer passes these after copying the files. They only touch
             // the settings file, so no window is created and nothing is played.
             if (Common.InstallerSetup.TryApply(args)) Environment.Exit(0);

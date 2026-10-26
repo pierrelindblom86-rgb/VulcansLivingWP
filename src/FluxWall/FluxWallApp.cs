@@ -127,6 +127,24 @@ namespace FluxWall
             Main.LibraryPage.RefreshCards();
             Main.UpdateStateChip();
 
+            // Optional GitHub update check. Delayed so it can never delay the
+            // first frame of the wallpaper or the window appearing, and rate
+            // limited to once every 12 hours by UpdateService itself.
+            if (Settings.CheckForUpdates)
+            {
+                var updateTimer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(8),
+                };
+                updateTimer.Tick += (s, e) =>
+                {
+                    updateTimer.Stop();
+                    try { Updates.UpdateService.StartupCheck(null); }
+                    catch (Exception ex) { Logger.Error(ex); }
+                };
+                updateTimer.Start();
+            }
+
             if (!Settings.FirstRunDone)
             {
                 try

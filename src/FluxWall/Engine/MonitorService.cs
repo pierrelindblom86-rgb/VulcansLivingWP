@@ -23,12 +23,15 @@ namespace FluxWall.Engine
                     if (Native.GetMonitorInfo(hmon, ref mi))
                     {
                         var name = string.IsNullOrEmpty(mi.szDevice) ? "Monitor" : mi.szDevice;
+                        var d = DescribeDevice(name);
                         list.Add(new MonitorInfoLite
                         {
                             Handle = hmon,
                             ScreenRect = mi.rcMonitor,
                             IsPrimary = (mi.dwFlags & 1) != 0,
                             DeviceName = name,
+                            Key = d.Key,
+                            FriendlyName = d.Name,
                         });
                     }
                     return true;
@@ -38,19 +41,63 @@ namespace FluxWall.Engine
             {
                 Logger.Error(new Exception("Monitor enumeration failed", e));
             }
+
+            // Enumeration order is not guaranteed across boots. Sorting by
+            // position keeps the UI stable and predictable.
+            list.Sort((a, b) =>
+            {
+                int c = a.ScreenRect.Left.CompareTo(b.ScreenRect.Left);
+                return c != 0 ? c : a.ScreenRect.Top.CompareTo(b.ScreenRect.Top);
+            });
             return list;
+        }
+
+        /// <summary>
+        /// Stable identity for one monitor: the PnP monitor interface path when
+        /// Windows exposes it, otherwise its GDI device name. The path survives
+        /// reboots and re-ordering; the GDI name survives only re-ordering.
+        /// </summary>
+        public static string KeyFor(string deviceName)
+        {
+            var d = DescribeDevice(deviceName);
+            return d.Key;
+        }
+
+        struct DeviceInfo { public string Key; public string Name; }
+
+        static DeviceInfo DescribeDevice(string deviceName)
+        {
+            var info = new DeviceInfo
+            {
+                Key = "dev:" + (deviceName ?? ""),
+                Name = "",
+            };
+            try
+            {
+                var dd = new Native.DISPLAY_DEVICE();
+                dd.cb = Marshal.SizeOf(typeof(Native.DISPLAY_DEVICE));
+                if (Native.EnumDisplayDevices(deviceName, 0, ref dd, Native.EDD_GET_DEVICE_INTERFACE_NAME))
+                {
+                    if (!string.IsNullOrEmpty(dd.DeviceID)) info.Key = "id:" + dd.DeviceID;
+                    var friendly = (dd.DeviceString ?? "").Trim();
+                    if (friendly.Length > 0) info.Name = friendly;
+                }
+            }
+            catch { }
+            return info;
         }
 
         /// <summary>Resolves the user's monitor-selection setting to concrete monitors.</summary>
         public static List<MonitorInfoLite> Resolve(AppSettings settings, List<MonitorInfoLite> monitors)
         {
             var result = new List<MonitorInfoLite>();
-            if (monitors.Count == 0) return result;
+            if (monitors == null || monitors.Count == 0) return result;
             if (monitors.Count == 1)
             {
                 result.Add(monitors[0]);
                 return result;
             }
+            if (settings == null) { result.AddRange(monitors); return result; }
 
             switch (settings.TargetMonitors)
             {
@@ -61,22 +108,53 @@ namespace FluxWall.Engine
                 case MonitorChoice.Selected:
                     foreach (var m in monitors)
                     {
-                        if (m.DeviceName == settings.SelectedMonitorDevice)
+                        if (m.DeviceName == settings.SelectedMonitorDevice ||
+                            m.Key == settings.SelectedMonitorDevice)
                         {
                             result.Add(m);
                             break;
                         }
                     }
-                    if (result.Count == 0) result.Add(monitors[0]);
+                    if (result.Count == 0) result.Add(Primary(monitors));
                     break;
 
                 default: // Primary
-                    foreach (var m in monitors)
-                        if (m.IsPrimary) { result.Add(m); break; }
-                    if (result.Count == 0) result.Add(monitors[0]);
+                    result.Add(Primary(monitors));
                     break;
             }
             return result;
+        }
+
+        public static MonitorInfoLite Primary(List<MonitorInfoLite> monitors)
+        {
+            foreach (var m in monitors)
+                if (m != null && m.IsPrimary) return m;
+            return monitors[0];
+        }
+
+        /// <summary>
+        /// Union of the supplied monitors in physical desktop coordinates. Used
+        /// for span mode, where the surfaces must not assume a horizontal layout.
+        /// </summary>
+        public static Native.RECT Union(List<MonitorInfoLite> monitors)
+        {
+            var r = new Native.RECT();
+            bool first = true;
+            foreach (var m in monitors)
+            {
+                if (m == null) continue;
+                if (first)
+                {
+                    r = m.ScreenRect;
+                    first = false;
+                    continue;
+                }
+                if (m.ScreenRect.Left < r.Left) r.Left = m.ScreenRect.Left;
+                if (m.ScreenRect.Top < r.Top) r.Top = m.ScreenRect.Top;
+                if (m.ScreenRect.Right > r.Right) r.Right = m.ScreenRect.Right;
+                if (m.ScreenRect.Bottom > r.Bottom) r.Bottom = m.ScreenRect.Bottom;
+            }
+            return r;
         }
 
         /// <summary>
