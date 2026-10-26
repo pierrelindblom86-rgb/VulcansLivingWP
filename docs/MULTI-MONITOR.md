@@ -179,6 +179,68 @@ throughout. The 120 Hz refresh rate was preserved and the desktop returned to 19
 After all the tests the original primary monitor, arrangement, resolution, settings and wallpaper
 were restored and verified.
 
+### Independent mode on real hardware (2026-10-26)
+
+Independent mode was left running with a different video on each screen — `white-wolf-girl` on the
+left screen and `glitch-girl` on the primary (right) screen — while the display configuration was
+changed underneath it. Two separate surface windows were present before and after every step:
+
+```
+0x1A6080E  pid=6592  rect=-1920,0 1920x1080  visible=True   white-wolf-girl
+0x1307FE   pid=6592  rect=0,0     1920x1080  visible=True   glitch-girl
+```
+
+A capture of the whole desktop showed both videos playing at the same time; neither was stretched
+across the seam.
+
+**Disconnect and reconnect** — `DisplaySwitch.exe /internal` (PC screen only), then `/extend`:
+
+```
+15:12:31  Display layout changed; re-applying wallpaper.
+            was=[Independent#<TCL>=white-wolf-girl@-1920,0,0,1080|<BNQ>=glitch-girl@0,0,1920,1080|]
+            now=[Independent#<BNQ>=glitch-girl@0,0,1920,1080|]
+15:12:31  Wallpaper set: Independent: [<BNQ> (1920x1080 at 0,0) -> glitch-girl...] on 1 surface(s).
+
+15:12:54  Display layout changed; re-applying wallpaper.
+            now=[Independent#<TCL>=white-wolf-girl@-1920,0,0,1080|<BNQ>=glitch-girl@0,0,1920,1080|]
+15:12:55  Wallpaper set: Independent: [<TCL> (1920x1080 at -1920,0) -> white-wolf-girl...]
+                                         [<BNQ> (1920x1080 at 0,0) -> glitch-girl...] on 2 surface(s).
+```
+
+The surface on the removed screen was disposed, and the screen that stayed kept **its own** video
+rather than falling back to the other one. When the screen returned, both assignments came back from
+the saved monitor keys even though Windows had renumbered the GDI device (`\\.\DISPLAY3` became
+`\\.\DISPLAY4` and later returned) — the PnP interface path inside the key absorbed the renumbering.
+
+On the reconnect rebuild both new surfaces were revealed by the 700 ms first-frame fallback
+(`Revealing the wallpaper surface before its first frame ... decoder did not start on a hidden
+window`) and each decoder opened 0.15–0.3 s later. The wallpaper was visible throughout and the log
+records the fallback as a warning, not an error; this was seen once, on that rebuild.
+
+**Resolution change** — the primary screen went from 1920×1080 to 1280×1024 at the same 120 Hz,
+then back:
+
+```
+15:14:02  Display layout changed; re-applying wallpaper.
+            now=[Independent#<TCL>=white-wolf-girl@-1920,0,0,1080|<BNQ>=glitch-girl@0,0,1280,1024|]
+15:14:03  Media opened: 1920x1080 on \\.\DISPLAY4.
+15:14:03  Media opened: 1920x1080 on \\.\DISPLAY3.
+15:14:03  Wallpaper set: Independent: [<TCL> (1920x1080 at -1920,0) -> white-wolf-girl...]
+                                         [<BNQ> (1280x1024 at 0,0) -> glitch-girl...] on 2 surface(s).
+
+15:14:59  Display layout changed; re-applying wallpaper.   (resolution restored)
+15:15:01  Wallpaper set: Independent: [<TCL> (1920x1080 at -1920,0) -> white-wolf-girl...]
+                                         [<BNQ> (1920x1080 at 0,0) -> glitch-girl...] on 2 surface(s).
+```
+
+Only the affected surface changed size; the other screen's surface kept its rectangle and its
+decoder. The desktop union went 3840×1080 → 3200×1080 → 3840×1080, both assignments survived every
+step, the commit landed 1.7–1.9 s after the display change, and the 120 Hz mode was preserved in both
+directions.
+
+No code change was needed for either scenario. Afterwards the original display mode, resolution,
+settings and the installed 1.2.3 build were restored and verified.
+
 ### Not verified on hardware
 
 These need equipment or conditions the development machine did not have. They are **not** passes:
