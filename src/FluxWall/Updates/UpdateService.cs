@@ -174,12 +174,22 @@ namespace FluxWall.Updates
                 catch { }
 
                 try { if (done != null) done(result); } catch (Exception e) { Logger.Error(e); }
-                var handlers = Completed;
-                if (handlers != null)
-                {
-                    try { handlers(result); } catch (Exception e) { Logger.Error(e); }
-                }
+                RaiseCompleted(result);
             });
+        }
+
+        /// <summary>
+        /// Tells the UI that a result is available. The About page is built at
+        /// startup, before the delayed automatic check runs, so it starts in the
+        /// "checking" state; every path that resolves the check — including the
+        /// cached and disabled shortcuts — has to report its result or the card
+        /// would stay on "Checking GitHub" with a disabled button for the session.
+        /// </summary>
+        static void RaiseCompleted(UpdateResult result)
+        {
+            var handlers = Completed;
+            if (handlers == null) return;
+            try { handlers(result); } catch (Exception e) { Logger.Error(e); }
         }
 
         /// <summary>
@@ -202,6 +212,7 @@ namespace FluxWall.Updates
                     };
                     lock (_gate) { _last = disabled; }
                     if (done != null) done(disabled);
+                    RaiseCompleted(disabled);
                     return;
                 }
 
@@ -212,6 +223,7 @@ namespace FluxWall.Updates
                     Logger.Info("Update check skipped: last check was " +
                                 settings.LastUpdateCheckUtc.ToString("u") + " (within 12 hours).");
                     if (done != null) done(fresh);
+                    RaiseCompleted(fresh);
                     return;
                 }
 

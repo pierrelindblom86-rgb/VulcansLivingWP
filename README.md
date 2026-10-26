@@ -12,13 +12,13 @@ is an optional GitHub update check that you can switch off.
 *Captured from a two-monitor Windows desktop: the video is playing in the desktop layer, and the
 library window floats above it.*
 
-- **Version:** 1.3.1
+- **Version:** 1.3.2
 - **Supported systems:** Windows 10 (64-bit) and Windows 11
 - **One installer, no extra downloads:** runtime components ship with Windows
-- **New in 1.3.1:** per-monitor wallpaper selection now applies on the first pick, restarts keep
-each screen's own video, and missing files are refused with a clear log line — see
-  [section 22](#22-version-history). The 1.3.0 multi-monitor modes (Independent, Span, Same all)
-  are included.
+- **New in 1.3.2:** the About page's update card now shows its cached result instead of staying
+  on "Checking GitHub" when the automatic check is skipped — see
+  [section 22](#22-version-history). The multi-monitor modes (Independent, Span, Same all) and the
+  1.3.1 assignment fixes are included.
 - **License:** MIT — see [section 23](#23-license).
 
 ---
@@ -591,6 +591,19 @@ the application.
 
 ## 22. Version history
 
+### 1.3.2
+
+Small fix for the About page's update card:
+
+- **The card no longer stays on "Checking GitHub".** The About page is created at startup, before
+  the delayed automatic check runs. When that check was answered from the 12-hour cache, or update
+  checks were switched off, the result never reached the page, leaving it on "Checking GitHub for
+  the latest stable release…" with a disabled button for the rest of the session. Cached and
+  disabled results are now delivered to the card, which shows the installed/latest versions and
+  enables **Check for updates** immediately. A real network check still updates it as before.
+
+No other behaviour changed.
+
 ### 1.3.1
 
 Patch release for the per-monitor wallpaper assignment added in 1.3.0:
@@ -687,4 +700,4 @@ The full text is in the [LICENSE](LICENSE) file.
 
 ---
 
-*VulcansLivingWP 1.3.1 — free animated video wallpapers for Windows.*
+*VulcansLivingWP 1.3.2 — free animated video wallpapers for Windows.*
