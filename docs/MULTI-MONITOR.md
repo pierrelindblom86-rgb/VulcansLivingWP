@@ -155,8 +155,29 @@ The span followed the new origin in both directions instead of keeping stale coo
 A fresh `WorkerW` was found and the span was re-applied about 1.6 seconds after the shell came back;
 the application kept running.
 
-After the tests the original primary monitor, arrangement, settings and wallpaper were restored and
-verified.
+**Resolution change** — the primary screen was switched from 1920×1080 to 1280×1024 (refresh rate
+kept at 120 Hz) with `ChangeDisplaySettingsEx`, then restored:
+
+```
+14:20:01  Display layout changed; re-applying wallpaper.
+            was=[Span#span=...@-1920,0,1920,1080|] now=[Span#span=...@-1920,0,1280,1080|]
+14:20:02  Wallpaper parented into desktop host before playback (... rect=-1920,0 3200x1080).
+14:20:02  Wallpaper loading ... 3200x1080 at -1920,0; the previous wallpaper stays until the first frame.
+14:20:03  Media opened: 1920x1080 on Span.
+14:20:03  Wallpaper set: Span: [span (3200x1080 at -1920,0) -> glitch-girl...] on 1 surface(s).
+
+14:20:31  Display layout changed; re-applying wallpaper.
+            was=[...1280,1080|] now=[...1920,1080|]
+14:20:32  Media opened: 1920x1080 on Span.
+14:20:32  Wallpaper set: Span: [span (3840x1080 at -1920,0) -> glitch-girl...] on 1 surface(s).
+```
+
+The span followed the new union in both directions within about a second, the old wallpaper stayed
+up until the replacement decoded its first frame, and the process kept running with one surface
+throughout. The 120 Hz refresh rate was preserved and the desktop returned to 1920×1080.
+
+After all the tests the original primary monitor, arrangement, resolution, settings and wallpaper
+were restored and verified.
 
 ### Not verified on hardware
 
@@ -166,7 +187,6 @@ These need equipment or conditions the development machine did not have. They ar
 - mixed-DPI scaling between monitors;
 - pulling a monitor cable, which also removes the monitor's EDID identity; the disconnect test used
   Windows' own display-mode switch, so the identity-removal path itself was not exercised;
-- a resolution change (as opposed to a disconnect or rearrangement) while span mode is playing;
 - a full Windows restart with span mode active (application restart with saved assignments is
   covered by the settings reload, and the 1.2.x startup restore path was verified separately);
 - Remote Desktop and sleep/resume with the new modes (the pause plumbing is unchanged, and lock /
