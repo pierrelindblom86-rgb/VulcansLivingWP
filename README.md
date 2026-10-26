@@ -6,6 +6,11 @@ automatically whenever a fullscreen app or game takes over the screen.
 
 It is free, needs no account, and contains no advertising, telemetry or network code at all.
 
+![VulcansLivingWP playing a video wallpaper behind the desktop icons](docs/hero.gif)
+
+*Captured from a two-monitor Windows desktop: the video is playing in the desktop layer, and the
+library window floats above it.*
+
 - **Version:** 1.2.3
 - **Supported systems:** Windows 10 (64-bit) and Windows 11
 - **One installer, no extra downloads:** runtime components ship with Windows
@@ -432,6 +437,7 @@ src\FluxWall\        application source (C#, WPF, .NET Framework 4.8)
   Visualizer\       optional audio visualiser
 installer\          Inno Setup script and icons
 tools\              build script and the end-to-end verification suites
+docs\               images used by this README
 ```
 
 ### Verification suites
