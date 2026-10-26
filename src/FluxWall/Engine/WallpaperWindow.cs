@@ -63,8 +63,12 @@ namespace FluxWall.Engine
 
         /// <summary>Raised once the video has opened on this surface.</summary>
         public event Action Opened;
-        /// <summary>Raised if Media Foundation reports the file cannot be played.</summary>
-        public event Action<WallpaperItem, string> MediaFailed;
+        /// <summary>
+        /// Raised if Media Foundation reports the file cannot be played. The
+        /// surface is included so the engine can tell a failing new surface from
+        /// an outgoing one that fails during replacement.
+        /// </summary>
+        public event Action<WallpaperWindow, WallpaperItem, string> MediaFailed;
 
         readonly bool _isSpan;
 
@@ -212,7 +216,7 @@ namespace FluxWall.Engine
             {
                 Logger.Error(new Exception("Attach failed for '" + _item.FilePath + "'", e));
                 var h = MediaFailed;
-                if (h != null) h(_item, "VulcansLivingWP could not place the wallpaper on the desktop.");
+                if (h != null) h(this, _item, "VulcansLivingWP could not place the wallpaper on the desktop.");
                 return false;
             }
         }
@@ -424,10 +428,11 @@ namespace FluxWall.Engine
             if (_unableToPlay) return;
             _unableToPlay = true;
             Logger.Error(new Exception(
-                "Playback failed for '" + _item.FilePath + "': " +
-                (e != null && e.ErrorException != null ? e.ErrorException.ToString() : "unknown")));
+                "Playback failed for '" + _item.FilePath + "' on " +
+                (_monitor != null && !string.IsNullOrEmpty(_monitor.DeviceName) ? _monitor.DeviceName : "monitor") +
+                ": " + (e != null && e.ErrorException != null ? e.ErrorException.ToString() : "unknown")));
             var h = MediaFailed;
-            if (h != null) h(_item, HumanPlaybackMessage());
+            if (h != null) h(this, _item, HumanPlaybackMessage());
         }
 
         static string HumanPlaybackMessage()

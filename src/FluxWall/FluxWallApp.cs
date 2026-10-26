@@ -116,7 +116,17 @@ namespace FluxWall
             {
                 var item = Library.Find(Settings.ActiveWallpaperId);
                 if (item != null)
-                    Engine.Apply(item);
+                {
+                    // In independent mode the saved per-monitor assignments are the
+                    // source of truth. Applying the "last wallpaper" here would
+                    // assign it to the primary monitor, so a restart silently
+                    // replaced that screen's own choice. Restore the saved layout
+                    // instead; every other mode activates the one global video.
+                    if (Settings.DisplayMode == DisplayMode.Independent)
+                        Engine.ApplyCurrentLayout();
+                    else
+                        Engine.Apply(item);
+                }
                 else
                     Logger.Warn("Saved wallpaper " + Settings.ActiveWallpaperId + " no longer exists in the library.");
             }

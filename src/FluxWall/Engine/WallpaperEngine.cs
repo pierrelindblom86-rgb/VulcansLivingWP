@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows.Threading;
 using FluxWall.Common;
@@ -207,8 +208,26 @@ namespace FluxWall.Engine
         {
             RunOnUi(() =>
             {
+                bool missing = false;
+                if (item != null)
+                {
+                    try { missing = item.IsMissing || !File.Exists(item.FilePath); }
+                    catch { missing = true; }
+                }
+                if (missing)
+                {
+                    // Do not store a choice that cannot play: the UI is rebuilt from
+                    // the settings, so it would otherwise show a new selection while
+                    // the old video kept running. Name the monitor and the file.
+                    Logger.Warn("Per-monitor assignment skipped for " + monitorKey +
+                                ": the selected file is missing: " + item.FilePath);
+                    return;
+                }
+
                 _settings.Assign(monitorKey, item != null ? item.Id : "");
                 if (item != null) _settings.ActiveWallpaperId = item.Id;
+                Logger.Info("Monitor " + monitorKey + " -> " +
+                            (item != null ? item.FilePath : "(cleared)") + ".");
                 SettingsStore.Save();
                 StartSwap(WallpaperPlan.Build(_settings, _library, MonitorService.All()));
             });
@@ -773,8 +792,22 @@ namespace FluxWall.Engine
 
         #region Events plumbing
 
-        void OnWindowFailed(WallpaperItem item, string message)
+        void OnWindowFailed(WallpaperWindow window, WallpaperItem item, string message)
         {
+            // While a swap is pending, the outgoing surfaces are still playing.
+            // Replacing one monitor's video opens the new decoder next to the old
+            // one, and Media Foundation can report a failure for the surface that
+            // is about to be disposed (0xC00D11B1 when both briefly decode the
+            // same file). The swap already has a replacement for it, so this must
+            // not raise an error dialog: log it and let the commit finish.
+            if (_incoming != null && window != null && !_incoming.Contains(window))
+            {
+                Logger.Info("Outgoing wallpaper surface for '" +
+                            (item != null ? item.FilePath : "?") +
+                            " failed while it was being replaced (ignored): " + message);
+                return;
+            }
+
             // A failed NEW surface must not replace a working wallpaper.
             if (_incoming != null && _incoming.Count > 0 && _incomingPlan != null &&
                 item != null && _incomingPlan.PrimaryItem != null &&
@@ -834,7 +867,11 @@ namespace FluxWall.Engine
                 // windows used to re-apply forever whenever one surface failed,
                 // which showed up as repeated identical activations.
                 var plan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
-                if (plan.Signature.Length > 0 &&
+                // An empty plan means there is nothing to show yet (for example a
+                // fresh span mode before a video was chosen). Re-applying it every
+                // tick changed nothing and only repeated the warning five times a
+                // minute, so leave it alone until a plan with surfaces appears.
+                if (plan.Signature.Length > 0 && !plan.IsEmpty &&
                     !string.Equals(plan.Signature, _appliedSignature, StringComparison.Ordinal))
                 {
                     Logger.Info("Display layout changed; re-applying wallpaper. was=[" +

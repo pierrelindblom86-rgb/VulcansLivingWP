@@ -502,17 +502,22 @@ namespace FluxWall.UI
                 if (current != null && current.Id == item.Id) selected = index;
                 index++;
             }
-            combo.SelectedIndex = selected;
-
-            bool suppress = true;
+            // The handler has to be attached BEFORE the initial SelectedIndex is
+            // set, because that assignment raises SelectionChanged synchronously.
+            // Attaching afterwards (with a "skip the first event" flag) meant the
+            // flag was never consumed and the user's first choice was swallowed:
+            // the combo showed the new file while nothing was assigned or played.
+            bool ready = false;
             combo.SelectionChanged += (s, e) =>
             {
-                if (suppress) { suppress = false; return; }
+                if (!ready) return;
                 var ci = combo.SelectedItem as ComboBoxItem;
                 var item = ci != null ? ci.Tag as WallpaperItem : null;
                 if (item == null) return;
                 try { picked(item); } catch (Exception ex) { Logger.Error(ex); }
             };
+            combo.SelectedIndex = selected;
+            ready = true;
             return combo;
         }
 

@@ -12,12 +12,13 @@ is an optional GitHub update check that you can switch off.
 *Captured from a two-monitor Windows desktop: the video is playing in the desktop layer, and the
 library window floats above it.*
 
-- **Version:** 1.3.0
+- **Version:** 1.3.1
 - **Supported systems:** Windows 10 (64-bit) and Windows 11
 - **One installer, no extra downloads:** runtime components ship with Windows
-- **New in 1.3.0:** a separate wallpaper for every monitor, one video truly spanning several
-  screens, a Displays page to switch between the three modes, one version number for everything,
-  and an optional GitHub update check — see [section 22](#22-version-history).
+- **New in 1.3.1:** per-monitor wallpaper selection now applies on the first pick, restarts keep
+each screen's own video, and missing files are refused with a clear log line — see
+  [section 22](#22-version-history). The 1.3.0 multi-monitor modes (Independent, Span, Same all)
+  are included.
 - **License:** MIT — see [section 23](#23-license).
 
 ---
@@ -118,7 +119,7 @@ the app reports it instead of showing a black screen.
 
 ## 6. Monitors
 
-VulcansLivingWP 1.3.0 has a **Displays** page (third item in the sidebar) with three layout modes.
+VulcansLivingWP has a **Displays** page (third item in the sidebar) with three layout modes.
 Switching between them never forgets a wallpaper assignment.
 
 ### 6.1 Different wallpaper on every monitor (Independent)
@@ -590,6 +591,33 @@ the application.
 
 ## 22. Version history
 
+### 1.3.1
+
+Patch release for the per-monitor wallpaper assignment added in 1.3.0:
+
+- **The first pick applies.** Choosing a video in a monitor's list now starts it immediately.
+  The first selection in every list was being discarded by the list's event wiring, so the item
+  changed on screen while the old video kept playing; later picks worked, which made the bug look
+  intermittent.
+- **Restarts keep every screen's own video.** Startup restored the global "last wallpaper" through a
+  path that assigned it to the primary monitor, silently replacing that monitor's saved choice.
+  Independent mode now restores the saved per-monitor layout untouched.
+- **Missing files are refused, not shown.** A per-monitor choice whose file is missing or
+  inaccessible is not saved; the log names the monitor and the path, and the previous wallpaper
+  keeps playing instead of the list claiming a video that cannot start.
+- **No false playback error during a swap.** Media Foundation can report a failure for the outgoing
+  surface while its replacement opens; that report is now logged instead of interrupting the switch
+  with an error dialog.
+- **No empty-layout retry loop.** With no assignable video, the health check no longer rebuilt and
+  warned about the empty plan every five seconds.
+
+Verified on a two-monitor Windows 10 desktop (BenQ XL2410T + TCL 32DD420): the corrected selection
+applied immediately and only to its own monitor, both assignments survived a restart, a
+1920×1080 → 1280×720 → 1920×1080 change rebuilt the surfaces while keeping both videos, fullscreen
+auto-pause stopped both decoders (CPU 7.8 % → 0.4 %) and resumed them, and the built-in
+`--layout-test` suite reported **50 passed, 0 failed, 0 skipped**. Span and Same-all modes were
+re-verified with the same build.
+
 ### 1.3.0
 
 Multi-monitor release.
@@ -659,4 +687,4 @@ The full text is in the [LICENSE](LICENSE) file.
 
 ---
 
-*VulcansLivingWP 1.3.0 — free animated video wallpapers for Windows.*
+*VulcansLivingWP 1.3.1 — free animated video wallpapers for Windows.*
