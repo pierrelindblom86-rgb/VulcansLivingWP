@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using FluxWall.Common;
@@ -83,6 +84,7 @@ namespace FluxWall.Engine
 
             _application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
 
+            GeometryTests(monitors);
             PlanTests(monitors);
             MigrationTests();
             LiveEngineTests(monitors);
@@ -103,6 +105,52 @@ namespace FluxWall.Engine
 
             return _failed == 0 ? 0 : 1;
         }
+
+        #region Display geometry
+
+        /// <summary>
+        /// The wallpaper layer is a physical-pixel surface, so MonitorService must
+        /// report the display mode's rectangle, not the DPI-virtualized one that
+        /// GetMonitorInfo returns to a system-DPI-aware process. A 125%-scaled
+        /// screen used to be reported 20% small here, which left the outer fifth
+        /// of the screen uncovered and, in portrait, cropped the video to a column.
+        /// </summary>
+        static void GeometryTests(List<MonitorInfoLite> monitors)
+        {
+            Heading("Display geometry (physical pixels)");
+            Check("At least one monitor is enumerated", monitors.Count > 0, "got " + monitors.Count);
+
+            int scaled = 0;
+            foreach (var m in monitors)
+            {
+                var dm = new Native.DEVMODE();
+                dm.dmSize = (short)Marshal.SizeOf(typeof(Native.DEVMODE));
+                bool known = Native.EnumDisplaySettingsEx(m.DeviceName, Native.ENUM_CURRENT_SETTINGS, ref dm, 0);
+                var mode = known
+                    ? new Native.RECT
+                    {
+                        Left = dm.dmPositionX,
+                        Top = dm.dmPositionY,
+                        Right = dm.dmPositionX + dm.dmPelsWidth,
+                        Bottom = dm.dmPositionY + dm.dmPelsHeight,
+                    }
+                    : m.ScreenRect;
+
+                Check("Monitor rectangle matches the physical display mode: " + m.DeviceName,
+                      known && RectExt.RectsEqual(m.ScreenRect, mode),
+                      "reported " + Rect(m.ScreenRect) + " vs mode " + Rect(mode));
+
+                // A screen that is taller than it is wide must produce a surface
+                // that is taller than it is wide; orientation is carried by the
+                // rectangle, not removed by a stale width/height pair.
+                if (m.Height > m.Width) scaled++;
+            }
+
+            if (scaled > 0)
+                Note(scaled + " portrait monitor(s) present; their rectangles are checked above.");
+        }
+
+        #endregion
 
         #region Plan tests
 

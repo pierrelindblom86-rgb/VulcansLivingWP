@@ -67,6 +67,14 @@ re-applies while a spurious driver notification does nothing. The five-second he
 the backstop. Span mode picks up a new union rectangle automatically; returned monitors are matched
 by key again.
 
+Monitor rectangles come from the current display mode (`EnumDisplaySettingsEx`), not from
+`GetMonitorInfo`. The wallpaper layer is a physical-pixel surface, while `GetMonitorInfo`
+DPI-virtualizes rectangles for this system-DPI-aware process: a 1080×1920 screen at 125% scaling was
+reported as 864×1536. Surfaces sized from that rectangle covered only four fifths of the display —
+in portrait the 16:9 video was also cropped into a column, which looked like a black screen. The mode
+is not virtualized and reports the physical pixels and desktop position, so it stays correct for
+rotated, mixed-DPI and negatively-positioned layouts.
+
 ## Settings and migration
 
 `AppSettings.Normalize()` repairs the 1.3 fields and runs the schema migration:
@@ -142,6 +150,19 @@ restored. Resolution and refresh rate were not touched.
 ```
 
 The span followed the new origin in both directions instead of keeping stale coordinates.
+
+**Orientation change (2026-10-29)** — the secondary 1080×1920 TV (125% scaling, portrait) was
+rotated to landscape and back with the app running. Before the geometry fix the surface was
+1536×864 (landscape) and 864×1536 (portrait), leaving the uncovered strip of desktop background
+visible around a cropped video; portrait screenshots were almost entirely black. After the fix the
+same rotations produced surfaces of 1920×1080 and 1080×1920 covering the whole screen, with the
+primary monitor's own video untouched, in both independent and span mode:
+
+```
+08:43:01  Wallpaper set: Independent: [...DISPLAY4 (1080x1920 at -1080,0) -> black-cat-in-rain...]
+08:44:15  Wallpaper set: Span: [span (3840x1080 at -1920,0) -> we-bare-bears...]
+08:44:35  Wallpaper set: Span: [span (3000x1920 at -1080,0) -> we-bare-bears...]
+```
 
 **Explorer restart** — `explorer.exe` was terminated; Windows restarted it on its own.
 

@@ -27,7 +27,7 @@ namespace FluxWall.Engine
                         list.Add(new MonitorInfoLite
                         {
                             Handle = hmon,
-                            ScreenRect = mi.rcMonitor,
+                            ScreenRect = PhysicalRect(name, mi.rcMonitor),
                             IsPrimary = (mi.dwFlags & 1) != 0,
                             DeviceName = name,
                             Key = d.Key,
@@ -50,6 +50,43 @@ namespace FluxWall.Engine
                 return c != 0 ? c : a.ScreenRect.Top.CompareTo(b.ScreenRect.Top);
             });
             return list;
+        }
+
+        /// <summary>
+        /// Real desktop rectangle of one display, in physical pixels.
+        ///
+        /// GetMonitorInfo virtualizes rectangles for a system-DPI-aware process:
+        /// a 1080x1920 screen scaled to 125% is reported as 864x1536, and the
+        /// desktop coordinates of screens at another scale no longer line up
+        /// with Explorer's wallpaper layer, which is laid out in physical pixels.
+        /// Sizing a wallpaper surface from that rectangle left a fifth of the
+        /// screen uncovered (black in portrait, where the video was also cropped
+        /// to a narrow column). The current display mode is not virtualized, so
+        /// it is the authoritative geometry for wallpaper window placement.
+        /// </summary>
+        static Native.RECT PhysicalRect(string deviceName, Native.RECT fallback)
+        {
+            try
+            {
+                var dm = new Native.DEVMODE();
+                dm.dmSize = (short)Marshal.SizeOf(typeof(Native.DEVMODE));
+                if (Native.EnumDisplaySettingsEx(deviceName, Native.ENUM_CURRENT_SETTINGS, ref dm, 0) &&
+                    dm.dmPelsWidth > 0 && dm.dmPelsHeight > 0)
+                {
+                    return new Native.RECT
+                    {
+                        Left = dm.dmPositionX,
+                        Top = dm.dmPositionY,
+                        Right = dm.dmPositionX + dm.dmPelsWidth,
+                        Bottom = dm.dmPositionY + dm.dmPelsHeight,
+                    };
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Warn("Could not read the display mode for " + deviceName + ": " + e.Message);
+            }
+            return fallback;
         }
 
         /// <summary>

@@ -112,7 +112,7 @@ namespace FluxWall.UI
             int idx;
             if (settings.TargetMonitors == MonitorChoice.All) idx = monitors.Count;
             else if (settings.TargetMonitors == MonitorChoice.Primary ||
-                     settings.SelectedMonitorDevice == default(MonitorInfoLite).ToString())
+                     string.IsNullOrEmpty(settings.SelectedMonitorDevice))
                 idx = monitors.Count + 1;
             else
             {
@@ -128,8 +128,9 @@ namespace FluxWall.UI
                 {
                     var cx = monitorCombo.SelectedIndex;
                     if (cx < 0) return;
-                    if (cx >= monitors.Count + 1) { settings.TargetMonitors = MonitorChoice.All; }
-                    else if (cx == monitors.Count) { settings.TargetMonitors = MonitorChoice.Primary; }
+                    // Items: [0..count-1] monitors, [count] All monitors, [count+1] Primary.
+                    if (cx == monitors.Count) { settings.TargetMonitors = MonitorChoice.All; }
+                    else if (cx == monitors.Count + 1) { settings.TargetMonitors = MonitorChoice.Primary; }
                     else
                     {
                         settings.TargetMonitors = MonitorChoice.Selected;

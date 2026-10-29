@@ -12,13 +12,14 @@ is an optional GitHub update check that you can switch off.
 *Captured from a two-monitor Windows desktop: the video is playing in the desktop layer, and the
 library window floats above it.*
 
-- **Version:** 1.3.2
+- **Version:** 1.3.3
 - **Supported systems:** Windows 10 (64-bit) and Windows 11
 - **One installer, no extra downloads:** runtime components ship with Windows
-- **New in 1.3.2:** the About page's update card now shows its cached result instead of staying
-  on "Checking GitHub" when the automatic check is skipped — see
-  [section 22](#22-version-history). The multi-monitor modes (Independent, Span, Same all) and the
-  1.3.1 assignment fixes are included.
+- **New in 1.3.3:** rotating a display no longer leaves the wallpaper black or cropped —
+  surfaces are now sized from the physical display mode, so a 125%-scaled portrait screen is
+  covered completely. A startup crash when "Show wallpaper on" was set to one specific monitor
+  is fixed too — see [section 22](#22-version-history). All multi-monitor modes and the 1.3.1
+  and 1.3.2 fixes are included.
 - **License:** MIT — see [section 23](#23-license).
 
 ---
@@ -591,6 +592,32 @@ the application.
 
 ## 22. Version history
 
+### 1.3.3
+
+Fix for displays that lost the wallpaper after a rotation, and for a startup crash:
+
+- **Portrait (and any scaled) screens are fully covered again.** Windows reports monitor
+  rectangles scaled for programs that are only system-DPI aware. On the 125%-scaled test TV, a
+  1080×1920 portrait screen was reported as 864×1536, so the wallpaper surface covered only 80% of
+  it and left desktop background around a cropped video — which looked like a black screen.
+  Monitor geometry now comes from the current display mode, which is always physical pixels, so
+  rotated, mixed-DPI and negatively positioned layouts are sized and placed exactly. Span mode
+  uses the same physical union.
+- **Rotating a display recovers without a restart.** The layout is rebuilt from the new rectangle
+  on the Windows display-change notification, in independent, span and same-all modes, while the
+  previous wallpaper keeps playing until the new surface has a frame.
+- **The app starts again when a single monitor is selected.** Choosing a specific screen under
+  **Settings → Wallpaper → Show wallpaper on** and restarting crashed with a null reference
+  before the window could open. The "All monitors" and "Primary monitor" choices also stored each
+  other's value; both are corrected.
+- **Upgrades and uninstalls stop the app before replacing files.** Setup checked the current and
+  legacy single-instance mutexes in one call, which only succeeds when *both* exist, so it
+  believed nothing was running, replaced the executable under a live instance, and could leave the
+  old file behind on uninstall. Each mutex is now checked separately, so the running app is shut
+  down through its `--shutdown` channel first.
+
+No playback, tray, fullscreen-pause or persistence behaviour changed.
+
 ### 1.3.2
 
 Small fix for the About page's update card:
@@ -700,4 +727,4 @@ The full text is in the [LICENSE](LICENSE) file.
 
 ---
 
-*VulcansLivingWP 1.3.2 — free animated video wallpapers for Windows.*
+*VulcansLivingWP 1.3.3 — free animated video wallpapers for Windows.*

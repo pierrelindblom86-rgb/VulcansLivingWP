@@ -120,7 +120,11 @@ end;
   The kernel answers both names directly; no tasklist shelling is involved. }
 function AnyInstanceRunning(): Boolean;
 begin
-  Result := CheckForMutexes(AppMutexName + ' ' + LegacyMutexName);
+  { CheckForMutexes requires every listed name to exist, so the current and
+    legacy mutexes must be tested separately. Listing both made this return
+    False whenever only the current app was running, and Setup then replaced
+    the executable underneath a live instance instead of stopping it. }
+  Result := CheckForMutexes(AppMutexName) or CheckForMutexes(LegacyMutexName);
 end;
 
 function LegacyInstanceRunning(): Boolean;
