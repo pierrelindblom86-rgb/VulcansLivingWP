@@ -156,6 +156,29 @@ begin
   end;
 end;
 
+{ The mutex disappears at Environment.Exit, a moment before Windows has
+  unmapped the executable. Deleting or replacing the exe in that window fails
+  with a sharing violation (and the old file survives the uninstall). Renaming
+  it is a direct test of the lock: it only succeeds once the last image handle
+  is closed, and it is reverted immediately. }
+procedure WaitForImageRelease(const Exe: String);
+var
+  I: Integer;
+begin
+  for I := 1 to 20 do
+  begin
+    if not FileExists(Exe) then
+      Exit;
+    if RenameFile(Exe, Exe + '.old') then
+    begin
+      RenameFile(Exe + '.old', Exe);
+      Exit;
+    end;
+    Sleep(250);
+  end;
+  Log('WaitForImageRelease: ' + Exe + ' is still locked after 5 seconds.');
+end;
+
 { Stops the app without ever starting its user interface.
 
   Older builds were stopped with "VulcansLivingWP.exe --stopwall", which is the
@@ -212,6 +235,11 @@ begin
     KillImage('FluxWall.exe');
     Result := WaitForNoInstances(6000);
   end;
+
+  { 4. Do not delete or replace files while Windows still has the image open. }
+  if Result then
+    WaitForImageRelease(Exe);
+
   if Result then
     Log('StopApp: finished, nothing is running any more.')
   else
@@ -285,7 +313,10 @@ begin
       suppressed confirmation counted as "yes" and silently wiped them. }
     if DirExists(ExpandConstant('{localappdata}\VulcansLivingWP')) then
     begin
-      if WizardSilent then
+      { UninstallSilent, not WizardSilent: the wizard functions are not
+        available while the uninstaller runs, and calling one raised a runtime
+        error that aborted this block. }
+      if UninstallSilent then
       begin
         if ExpandConstant('{param:DELETEUSERDATA|0}') = '1' then
           DelTree(ExpandConstant('{localappdata}\VulcansLivingWP'), True, True, True);
