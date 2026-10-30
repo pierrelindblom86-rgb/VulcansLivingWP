@@ -49,12 +49,18 @@ namespace FluxWall
                 Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND,
                 IntPtr.Zero, _winEventProc, 0, 0,
                 Native.WINEVENT_OUTOFCONTEXT | Native.WINEVENT_SKIPOWNPROCESS);
-            if (_hook == IntPtr.Zero)
+            var hookOk = _hook != IntPtr.Zero;
+            if (!hookOk)
                 Logger.Warn("SetWinEventHook failed; falling back to timer-only detection.");
 
+            // The WinEvent hook covers foreground changes. The fallback timer only
+            // catches the rare case where a window resizes into fullscreen without
+            // re-activating. Poll at 10s when the hook works, 2s when it doesn't.
             _fallback = new System.Windows.Threading.DispatcherTimer(
                 System.Windows.Threading.DispatcherPriority.Background);
-            _fallback.Interval = TimeSpan.FromSeconds(2);
+            _fallback.Interval = hookOk
+                ? TimeSpan.FromSeconds(10)
+                : TimeSpan.FromSeconds(2);
             _fallback.Tick += (s, e) => { Evaluate(); };
             _fallback.Start();
         }

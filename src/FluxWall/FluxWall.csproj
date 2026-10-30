@@ -29,6 +29,12 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <!-- 64-bit only (Windows 10/11 64-bit per the README); explicit optimizations
+         for Release builds so the JIT inlines and registers-allocates the hot
+         decode/render path. -->
+    <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
+    <PlatformTarget Condition="'$(Configuration)' == 'Release'">x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
 
   <!--

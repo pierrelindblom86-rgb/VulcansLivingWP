@@ -13,7 +13,7 @@
     docs/RELEASING.md describes the full release procedure.
   -->
   <PropertyGroup>
-    <VulcanVersion>1.3.3</VulcanVersion>
+    <VulcanVersion>1.3.4</VulcanVersion>
   </PropertyGroup>
 
 </Project>

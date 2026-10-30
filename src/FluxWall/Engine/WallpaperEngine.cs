@@ -49,6 +49,7 @@ namespace FluxWall.Engine
         readonly DispatcherTimer _displayTimer;
         readonly DispatcherTimer _retryTimer;
         readonly ScreenStateMonitor _screen = new ScreenStateMonitor();
+        string _lastMonitorSignature = "";
         WallpaperPlan _retryPlan;
         readonly Random _random = new Random();
         string _previousWallpaperId = "";
@@ -866,17 +867,23 @@ namespace FluxWall.Engine
                 // the plan that is actually on screen. Comparing against the live
                 // windows used to re-apply forever whenever one surface failed,
                 // which showed up as repeated identical activations.
-                var plan = WallpaperPlan.Build(_settings, _library, MonitorService.All());
-                // An empty plan means there is nothing to show yet (for example a
-                // fresh span mode before a video was chosen). Re-applying it every
-                // tick changed nothing and only repeated the warning five times a
-                // minute, so leave it alone until a plan with surfaces appears.
-                if (plan.Signature.Length > 0 && !plan.IsEmpty &&
-                    !string.Equals(plan.Signature, _appliedSignature, StringComparison.Ordinal))
+                //
+                // Only rebuild the full plan when the monitor topology actually
+                // changed; re-enumerating monitors and building a StringBuilder
+                // signature every 5s while idle is pure allocation churn.
+                var monitors = MonitorService.All();
+                var monitorSignature = MonitorService.Signature(monitors);
+                if (!string.Equals(monitorSignature, _lastMonitorSignature, StringComparison.Ordinal))
                 {
-                    Logger.Info("Display layout changed; re-applying wallpaper. was=[" +
-                                _appliedSignature + "] now=[" + plan.Signature + "]");
-                    Reapply();
+                    _lastMonitorSignature = monitorSignature;
+                    var plan = WallpaperPlan.Build(_settings, _library, monitors);
+                    if (plan.Signature.Length > 0 && !plan.IsEmpty &&
+                        !string.Equals(plan.Signature, _appliedSignature, StringComparison.Ordinal))
+                    {
+                        Logger.Info("Display layout changed; re-applying wallpaper. was=[" +
+                                    _appliedSignature + "] now=[" + plan.Signature + "]");
+                        Reapply();
+                    }
                 }
             }
             catch (Exception e)

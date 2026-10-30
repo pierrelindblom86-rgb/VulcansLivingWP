@@ -12,14 +12,12 @@ is an optional GitHub update check that you can switch off.
 *Captured from a two-monitor Windows desktop: the video is playing in the desktop layer, and the
 library window floats above it.*
 
-- **Version:** 1.3.3
+- **Version:** 1.3.4
 - **Supported systems:** Windows 10 (64-bit) and Windows 11
 - **One installer, no extra downloads:** runtime components ship with Windows
-- **New in 1.3.3:** rotating a display no longer leaves the wallpaper black or cropped —
-  surfaces are now sized from the physical display mode, so a 125%-scaled portrait screen is
-  covered completely. A startup crash when "Show wallpaper on" was set to one specific monitor
-  is fixed too — see [section 22](#22-version-history). All multi-monitor modes and the 1.3.1
-  and 1.3.2 fixes are included.
+- **New in 1.3.4:** reliability and housekeeping — the fullscreen watcher now polls at 10s when its
+  hook is active (2s only when the hook failed), and the 5s health check skips rebuilding the
+  wallpaper plan when the monitor topology has not changed. All 1.3.x fixes are included.
 - **License:** MIT — see [section 23](#23-license).
 
 ---
@@ -592,6 +590,18 @@ the application.
 
 ## 22. Version history
 
+### 1.3.4
+
+Reliability and housekeeping:
+
+- **Fullscreen watcher polling is cheaper when nothing is happening.** The 2s fallback timer runs
+  only when the WinEvent hook could not be installed; when the hook works, polling drops to 10s.
+- **The 5s health check no longer rebuilds the wallpaper plan while idle.** It compares a monitor
+  signature first and only re-applies when the topology actually changed, removing allocation churn
+  on a static desktop.
+
+All 1.3.x fixes are included.
+
 ### 1.3.3
 
 Fix for displays that lost the wallpaper after a rotation, and for a startup crash:
@@ -727,4 +737,4 @@ The full text is in the [LICENSE](LICENSE) file.
 
 ---
 
-*VulcansLivingWP 1.3.3 — free animated video wallpapers for Windows.*
+*VulcansLivingWP 1.3.4 — free animated video wallpapers for Windows.*
