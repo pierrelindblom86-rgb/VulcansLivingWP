@@ -316,7 +316,7 @@ namespace FluxWall.UI
                 Text = _app.Settings.PauseHotkey ?? "",
                 MinWidth = 220,
                 FontSize = 13,
-                Background = Theme.Bru(Theme.From(0x23232D)),
+                Background = Theme.ChipBgB,
                 Foreground = Theme.TextB,
                 BorderBrush = Theme.BorderB,
                 Padding = new Thickness(8, 6, 8, 6),

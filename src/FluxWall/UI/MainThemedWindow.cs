@@ -11,19 +11,20 @@ namespace FluxWall.UI
     /// <summary>Central dark theme palette + small control factory helpers.</summary>
     public static class Theme
     {
-        public static readonly Color BaseBg      = From(0x111116);
-        public static readonly Color PanelBg     = From(0x17171D);
-        public static readonly Color CardBg      = From(0x1E1E26);
-        public static readonly Color CardBgHover = From(0x262632);
-        public static readonly Color Border      = From(0x2A2A34);
-        public static readonly Color TextMain    = From(0xEDEBF2);
-        public static readonly Color TextMuted   = From(0x9C99AB);
-        public static readonly Color Accent      = From(0x7C5CFC);
-        public static readonly Color AccentHover = From(0x8F74FF);
+        public static readonly Color BaseBg      = From(0x080A0E);
+        public static readonly Color PanelBg     = From(0x0F1219);
+        public static readonly Color CardBg      = From(0x0F1219);
+        public static readonly Color CardBgHover = From(0x151B24);
+        public static readonly Color Border      = From(0x252D39);
+        public static readonly Color TextMain    = From(0xF0F4F8);
+        public static readonly Color TextMuted   = From(0x8995A5);
+        public static readonly Color Accent      = From(0x00FF88);
+        public static readonly Color AccentHover = From(0x00C76B);
+        public static readonly Color Cyan        = From(0x00D4FF);
         public static readonly Color Good        = From(0x3FBF7F);
         public static readonly Color Warn        = From(0xE0A64B);
         public static readonly Color Bad         = From(0xE05768);
-        public static readonly Color ChipBg      = From(0x2C2C38);
+        public static readonly Color ChipBg      = From(0x1E1E26);
 
         public static Color From(int rgb) => Color.FromRgb(
             (byte)((rgb >> 16) & 0xFF), (byte)((rgb >> 8) & 0xFF), (byte)(rgb & 0xFF));
@@ -39,6 +40,7 @@ namespace FluxWall.UI
         public static Brush TextMutedB   { get { return Bru(TextMuted); } }
         public static Brush AccentB      { get { return Bru(Accent); } }
         public static Brush AccentHoverB { get { return Bru(AccentHover); } }
+        public static Brush CyanB        { get { return Bru(Cyan); } }
         public static Brush GoodB        { get { return Bru(Good); } }
         public static Brush WarnB        { get { return Bru(Warn); } }
         public static Brush BadB         { get { return Bru(Bad); } }
@@ -95,12 +97,12 @@ namespace FluxWall.UI
                         "<ControlTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" " +
                         "xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\" TargetType=\"Slider\">" +
                         "<Grid Height=\"22\" VerticalAlignment=\"Center\" Background=\"Transparent\">" +
-                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#2C2C38\" VerticalAlignment=\"Center\"/>" +
+                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#252D39\" VerticalAlignment=\"Center\"/>" +
                         "<Track x:Name=\"PART_Track\" VerticalAlignment=\"Center\">" +
                         "<Track.DecreaseRepeatButton>" +
                         "<RepeatButton Command=\"{x:Static Slider.DecreaseLarge}\" Focusable=\"False\">" +
                         "<RepeatButton.Template><ControlTemplate TargetType=\"RepeatButton\">" +
-                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#7C5CFC\"/>" +
+                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#00FF88\"/>" +
                         "</ControlTemplate></RepeatButton.Template></RepeatButton>" +
                         "</Track.DecreaseRepeatButton>" +
                         "<Track.IncreaseRepeatButton>" +
@@ -112,7 +114,7 @@ namespace FluxWall.UI
                         "<Thumb Width=\"14\" Height=\"14\">" +
                         "<Thumb.Template><ControlTemplate TargetType=\"Thumb\">" +
                         "<Grid><Ellipse Fill=\"#FFFFFF\" Width=\"13\" Height=\"13\"/>" +
-                        "<Ellipse Fill=\"Transparent\" Stroke=\"#7C5CFC\" StrokeThickness=\"2\" Width=\"14\" Height=\"14\"/></Grid>" +
+                        "<Ellipse Fill=\"Transparent\" Stroke=\"#00FF88\" StrokeThickness=\"2\" Width=\"14\" Height=\"14\"/></Grid>" +
                         "</ControlTemplate></Thumb.Template></Thumb>" +
                         "</Track.Thumb></Track></Grid></ControlTemplate>";
                     _sliderTemplate = (ControlTemplate)XamlReader.Parse(xaml);
@@ -147,7 +149,7 @@ namespace FluxWall.UI
             {
                 Content = text,
                 Foreground = fg ?? TextB,
-                Background = Bru(From(0x23232D)),
+                Background = ChipBgB,
                 BorderBrush = BorderB,
                 BorderThickness = new Thickness(1),
                 FontSize = 13,
@@ -160,7 +162,7 @@ namespace FluxWall.UI
             return b;
         }
 
-        /// <summary>Primary violet action button.</summary>
+        /// <summary>Primary neon-green action button.</summary>
         public static Button AccentButton(string text, Action onClick, double fontSize = 14, Thickness? padding = null)
         {
             var b = new Button

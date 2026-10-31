@@ -18,7 +18,7 @@ namespace FluxWall.UI
     {
         static readonly string[] ColorPresets =
         {
-            "#7C5CFC", "#4C8DFF", "#35D6ED", "#3FBF7F",
+            "#00FF88", "#00D4FF", "#35D6ED", "#3FBF7F",
             "#E0A64B", "#E05768", "#E057A8", "#FFFFFF",
         };
 
@@ -264,7 +264,7 @@ namespace FluxWall.UI
             {
                 Content = "Custom…",
                 Foreground = Theme.TextB,
-                Background = Theme.Bru(Theme.From(0x23232D)),
+                Background = Theme.ChipBgB,
                 BorderBrush = Theme.BorderB,
                 BorderThickness = new Thickness(1),
                 FontSize = 12,

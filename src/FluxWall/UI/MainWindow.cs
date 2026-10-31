@@ -275,7 +275,7 @@ namespace FluxWall.UI
             // and the click never reaches the button.
             System.Windows.Shell.WindowChrome.SetIsHitTestVisibleInChrome(b, true);
             b.Click += (s, e) => { try { click(); } catch (Exception ex) { Logger.Error(ex); } };
-            b.MouseEnter += (s, e) => b.Background = Theme.Bru(Theme.From(0x23232D));
+            b.MouseEnter += (s, e) => b.Background = Theme.ChipBgB;
             b.MouseLeave += (s, e) => b.Background = Brushes.Transparent;
             return b;
         }
@@ -351,7 +351,7 @@ namespace FluxWall.UI
                 Content = text,
                 FontSize = 14,
                 Foreground = active ? Theme.TextB : Theme.TextMutedB,
-                Background = active ? Theme.Bru(Theme.From(0x23232D)) : Brushes.Transparent,
+                Background = active ? Theme.CardBgHoverB : Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(14, 10, 14, 10),
                 Cursor = Cursors.Hand,
@@ -404,7 +404,7 @@ namespace FluxWall.UI
 
         void SetNav(Button b, bool on)
         {
-            b.Background = on ? Theme.Bru(Theme.From(0x23232D)) : Brushes.Transparent;
+            b.Background = on ? Theme.CardBgHoverB : Brushes.Transparent;
             b.Foreground = on ? Theme.TextB : Theme.TextMutedB;
         }
         #endregion
@@ -431,7 +431,7 @@ namespace FluxWall.UI
             var engine = _app.Engine;
             if (engine == null || engine.Current == null)
             {
-                _stateDot.Background = Theme.Bru(Theme.From(0x4C4C58));
+                _stateDot.Background = Theme.TextMutedB;
                 _stateChip.Text = "No wallpaper";
             }
             else if (engine.ManualPaused)

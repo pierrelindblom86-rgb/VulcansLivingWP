@@ -103,7 +103,7 @@ namespace FluxWall.UI
             // ── Notice banner (missing files / playback errors) ──
             _notice = new Border
             {
-                Background = Theme.Bru(Theme.From(0x3A2A22)),
+                Background = Theme.Bru(Color.FromArgb(200, 0xE0, 0xA6, 0x4B)),
                 BorderBrush = Theme.WarnB,
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
@@ -243,7 +243,7 @@ namespace FluxWall.UI
             var tb = new TextBlock
             {
                 Text = text,
-                Foreground = Theme.Bru(Theme.From(0xF0C97E)),
+                Foreground = Theme.TextB,
                 FontSize = 12.5,
                 TextWrapping = TextWrapping.Wrap,
             };
@@ -297,7 +297,7 @@ namespace FluxWall.UI
             g.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
             // Preview host lives inside the card thumbnail area.
-            var thumbHost = new Border { Background = Theme.Bru(Theme.From(0x141419)), ClipToBounds = true };
+            var thumbHost = new Border { Background = Theme.PanelBgB, ClipToBounds = true };
             Grid.SetRow(thumbHost, 0);
             g.Children.Add(thumbHost);
 
@@ -345,14 +345,14 @@ namespace FluxWall.UI
             if (!apply.IsEnabled) apply.Opacity = 0.5;
             row.Children.Add(apply);
 
-            var preview = MiniButton("Preview", Theme.Bru(Theme.From(0x9C99AB)),
+            var preview = MiniButton("Preview", Theme.TextMutedB,
                 () => TogglePreview(previewCtrl, card));
             preview.IsEnabled = !item.IsMissing;
             if (!preview.IsEnabled) preview.Opacity = 0.5;
             preview.Margin = new Thickness(6, 0, 0, 0);
             row.Children.Add(preview);
 
-            var remove = MiniButton("✕", Theme.Bru(Theme.From(0x9C99AB)),
+            var remove = MiniButton("✕", Theme.TextMutedB,
                 () => Remove(item));
             remove.ToolTip = "Remove from library (the original video file is not deleted)";
             remove.Margin = new Thickness(6, 0, 0, 0);
@@ -404,7 +404,7 @@ namespace FluxWall.UI
                 Content = text,
                 FontSize = 11.5,
                 Foreground = fg,
-                Background = Theme.Bru(Theme.From(0x2C2C38)),
+                Background = Theme.ChipBgB,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(9, 4, 9, 4),
                 Cursor = Cursors.Hand,

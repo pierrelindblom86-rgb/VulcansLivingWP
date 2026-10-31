@@ -196,7 +196,7 @@ namespace FluxWall.UI
                 Width = 96,
                 Height = 54,
                 CornerRadius = new CornerRadius(6),
-                Background = Theme.Bru(Theme.From(0x141419)),
+                Background = Theme.PanelBgB,
                 ClipToBounds = true,
             };
             if (item != null)
