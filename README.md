@@ -1,3 +1,61 @@
+<div align="center">
+
+<img src="docs/hero.gif" alt="Vulcans Living Wallpaper running on a two-monitor Windows desktop" width="100%">
+
+# Vulcans Living Wallpaper
+
+### Bring your desktop to life.
+
+Turn your own MP4 or MOV videos into animated desktop wallpapers. Use a different video on each monitor, or stretch one across all of them. It pauses when a fullscreen app or game is running.
+
+**[⬇ Download the installer](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.5/VulcansLivingWP_Setup.exe)** &nbsp;·&nbsp; **[Latest release](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/latest)**
+
+Free · Windows 10 (64-bit) or 11 · MIT license
+
+</div>
+
+---
+
+## Features
+
+| | |
+|---|---|
+| 🎞️ **MP4 and MOV wallpapers** | Use your own video files as live wallpapers. They loop on your desktop. |
+| 🖥️ **Different wallpaper per monitor** | Give each monitor its own video, or use Independent mode. |
+| ↔️ **Span across monitors** | Stretch one wallpaper across all of your monitors. |
+| ⏸️ **Auto-pause** | Pauses when a fullscreen app or game is running, and when the screen locks, the display turns off, a remote session starts, or the PC sleeps. |
+| 🧭 **System tray controls** | Runs quietly in the system tray, with controls from the tray icon. |
+| ⌨️ **Ctrl+Alt+W hotkey** | Pause or resume the live wallpaper with a keyboard shortcut. The shortcut can be changed in Settings. |
+| 🚀 **Start with Windows** | Optionally launches when you sign in. |
+| 🆓 **Free to use** | Needs no account, and contains no advertising or telemetry. Licensed under MIT. |
+
+## How it works
+
+1. **Add a video.** Open the app and add an MP4 or MOV file to your library.
+2. **Apply it.** Choose the video and pick the monitor or monitors it should play on.
+3. **Enjoy.** It plays behind your icons and pauses automatically when you need the screen for something else.
+
+## Screenshots
+
+The image at the top is a real capture of Vulcans Living Wallpaper on a two-monitor Windows desktop, with a video playing behind the desktop icons.
+
+## Download
+
+| File | What it is |
+|---|---|
+| [`VulcansLivingWP_Setup.exe`](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.5/VulcansLivingWP_Setup.exe) | Windows installer, latest stable release (v1.3.5) |
+| [All releases](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases) | Earlier versions and release notes |
+
+**Requirements:** Windows 10 (64-bit) or Windows 11, and the .NET Framework 4.8 runtime.
+
+## More from Vulcans
+
+Vulcans Living Wallpaper and **[Vulcans Replay Studio](https://github.com/pierrelindblom86-rgb/VulcansReplayStudio)** are two separate free Windows apps from the same developer. Each one works on its own.
+
+---
+
+## Full documentation
+
 # VulcansLivingWP — Free Animated Live Wallpaper for Windows
 
 VulcansLivingWP turns your own video files into animated desktop wallpapers. The video plays
