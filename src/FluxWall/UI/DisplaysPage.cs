@@ -57,7 +57,8 @@ namespace FluxWall.UI
                 var settings = _app.Settings;
                 var monitors = MonitorService.All();
 
-                _root.Children.Add(Header("Display layout"));
+                _root.Children.Add(Theme.PageHeader("Displays",
+                    "Choose how wallpapers are shown across your monitors."));
                 _root.Children.Add(Card(ModeChooser()));
                 _root.Children.Add(Space());
 
@@ -535,15 +536,7 @@ namespace FluxWall.UI
 
         Border Card(FrameworkElement content)
         {
-            return new Border
-            {
-                Background = Theme.PanelBgB,
-                BorderBrush = Theme.BorderB,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(18, 16, 18, 16),
-                Child = content,
-            };
+            return Theme.Card(content, 18, new Thickness(0));
         }
 
         FrameworkElement Space() => new Border { Height = 18 };

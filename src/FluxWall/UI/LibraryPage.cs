@@ -78,20 +78,10 @@ namespace FluxWall.UI
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var titleStack = new StackPanel
-            {
-                Orientation = Orientation.Vertical,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            var h1 = Theme.Label("Video Library");
-            h1.FontSize = 22; h1.FontWeight = FontWeights.SemiBold;
-            var h2 = new TextBlock
-            {
-                Text = "Import MP4 or MOV videos, then apply one as your animated desktop wallpaper.",
-                Foreground = Theme.TextMutedB, FontSize = 12, Margin = new Thickness(0, 3, 0, 0),
-            };
-            titleStack.Children.Add(h1);
-            titleStack.Children.Add(h2);
+            var titleStack = Theme.PageHeader("Video Library",
+                "Import MP4 or MOV videos, then apply one as your animated desktop wallpaper.");
+            titleStack.Margin = new Thickness(0);
+            titleStack.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(titleStack, 0);
             header.Children.Add(titleStack);
 
@@ -339,7 +329,7 @@ namespace FluxWall.UI
             var row = new StackPanel { Orientation = Orientation.Horizontal };
             var apply = MiniButton(
                 _app.Engine.Current == item ? "✓ Active" : "Apply",
-                _app.Engine.Current == item ? Theme.GoodB : Theme.AccentB,
+                _app.Engine.Current == item ? Theme.CyanB : Theme.AccentB,
                 () => Apply(item));
             apply.IsEnabled = !item.IsMissing;
             if (!apply.IsEnabled) apply.Opacity = 0.5;

@@ -34,59 +34,83 @@ namespace FluxWall.UI
             {
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                Padding = new Thickness(32, 26, 32, 26),
+                Padding = new Thickness(32, 30, 32, 32),
             };
 
             var root = new StackPanel { MaxWidth = 900, HorizontalAlignment = HorizontalAlignment.Left };
             scroll.Content = root;
 
-            root.Children.Add(Header("Wallpaper"));
-            root.Children.Add(SettingsCard(BuildWallpaperSection()));
+            root.Children.Add(Theme.PageHeader("Settings",
+                "Choose how VulcansLivingWP starts, plays and behaves."));
+
+            root.Children.Add(Theme.Section("Startup and Windows integration",
+                "Launch behaviour and the system tray.", BuildStartupSection()));
             root.Children.Add(Space());
 
-            root.Children.Add(Header("Visualizer"));
+            root.Children.Add(Theme.Section("Wallpaper behavior",
+                "Where the wallpaper appears and what happens on launch.", BuildWallpaperSection()));
+            root.Children.Add(Space());
+
+            root.Children.Add(Theme.Section("Display and playback",
+                "Scaling, pausing and the pause shortcut.", BuildPlaybackSection()));
+            root.Children.Add(Space());
+
             _visualizer = new VisualizerSection(_app);
-            root.Children.Add(SettingsCard(_visualizer.Content));
+            root.Children.Add(Theme.Section("Audio and visualizer",
+                "Wallpaper sound and the audio visualiser.", BuildAudioSection()));
             root.Children.Add(Space());
 
-            root.Children.Add(Header("Behaviour"));
-            root.Children.Add(SettingsCard(BuildBehaviourSection()));
+            root.Children.Add(Theme.Section("Automatic wallpaper switching",
+                "Rotate through your library while a wallpaper plays.", BuildAutoSwitchSection()));
             root.Children.Add(Space());
 
-            root.Children.Add(Header("Keyboard"));
-            root.Children.Add(SettingsCard(BuildHotkeySection()));
-            root.Children.Add(Space());
-
-            var sa = Theme.QuietButton("Open log folder", () => _app.OpenLogFolder());
-            sa.Margin = new Thickness(0, 0, 0, 10);
-            root.Children.Add(sa);
+            root.Children.Add(Theme.Section("Updates",
+                "Release checks and troubleshooting.", BuildUpdatesSection()));
 
             _page = new Grid { Background = Theme.BaseBgB };
             _page.Children.Add(scroll);
         }
 
-        TextBlock Header(string text) => new TextBlock
-        {
-            Text = text, FontSize = 18, FontWeight = FontWeights.SemiBold,
-            Foreground = Theme.TextB, Margin = new Thickness(0, 0, 0, 10),
-        };
-
-        Border SettingsCard(FrameworkElement content)
-        {
-            return new Border
-            {
-                Background = Theme.PanelBgB,
-                BorderBrush = Theme.BorderB,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(18, 16, 18, 16),
-                Child = content,
-            };
-        }
-
         FrameworkElement Space() => new Border { Height = 18 };
 
         #region Sections
+
+        FrameworkElement BuildStartupSection()
+        {
+            var s = new StackPanel();
+
+            var startupToggle = new ToggleSwitch { IsOn = _app.Settings.StartWithWindows };
+            startupToggle.Toggled += () =>
+            {
+                _app.Settings.StartWithWindows = startupToggle.IsOn;
+                SettingsStore.Save();
+                _app.ApplyStartWithWindows();
+            };
+            s.Children.Add(Theme.SettingsRow("Start with Windows",
+                "Launch VulcansLivingWP automatically when you sign in.", startupToggle));
+
+            var minimizedToggle = new ToggleSwitch { IsOn = _app.Settings.StartMinimized };
+            minimizedToggle.Toggled += () =>
+            {
+                _app.Settings.StartMinimized = minimizedToggle.IsOn;
+                SettingsStore.Save();
+            };
+            s.Children.Add(Theme.SettingsRow("Start minimized to the tray",
+                "Keep the main window hidden until you open it from the tray.", minimizedToggle));
+
+            var trayToggle = new ToggleSwitch { IsOn = _app.Settings.ShowTrayIcon };
+            trayToggle.Toggled += () =>
+            {
+                _app.Settings.ShowTrayIcon = trayToggle.IsOn;
+                SettingsStore.Save();
+                _app.Tray.CommitVisible(trayToggle.IsOn);
+            };
+            s.Children.Add(Theme.SettingsRow("Show system tray icon",
+                "Quick pause, resume and exit live in the tray.", trayToggle));
+
+            return s;
+        }
+
         FrameworkElement BuildWallpaperSection()
         {
             var s = new StackPanel();
@@ -104,7 +128,8 @@ namespace FluxWall.UI
             {
                 var comboItem = new ComboBoxItem { Content = m.ToString() };
                 monitorCombo.Items.Add(comboItem);
-            }            monitorCombo.Items.Add(new ComboBoxItem { Content = "All monitors" });
+            }
+            monitorCombo.Items.Add(new ComboBoxItem { Content = "All monitors" });
             monitorCombo.Items.Add(new ComboBoxItem { Content = "Primary monitor" });
 
             // select current
@@ -122,7 +147,7 @@ namespace FluxWall.UI
             }
             if (idx < monitorCombo.Items.Count) monitorCombo.SelectedIndex = idx;
 
-            monitorCombo.SelectionChanged += (s, e) =>
+            monitorCombo.SelectionChanged += (sender, e) =>
             {
                 try
                 {
@@ -146,12 +171,28 @@ namespace FluxWall.UI
                 "Pick a monitor, or spread it across every display. For a different video on each " +
                 "screen, or one video spanning several screens, use the Displays page.", monitorCombo));
 
+            var restoreToggle = new ToggleSwitch { IsOn = _app.Settings.RestoreLastWallpaper };
+            restoreToggle.Toggled += () =>
+            {
+                _app.Settings.RestoreLastWallpaper = restoreToggle.IsOn;
+                SettingsStore.Save();
+            };
+            s.Children.Add(Theme.SettingsRow("Restore wallpaper on startup",
+                "Replay your last applied wallpaper when VulcansLivingWP launches.", restoreToggle));
+
+            return s;
+        }
+
+        FrameworkElement BuildPlaybackSection()
+        {
+            var s = new StackPanel();
+
             // Scaling
             var scalingCombo = new ComboBox { MinWidth = 220, FontSize = 13 };
             var scaleModes = new[] { "Fill (cover, crops edges)", "Fit (full video, black bars)", "Stretch (distorts to fit)" };
             foreach (var mode in scaleModes) scalingCombo.Items.Add(new ComboBoxItem { Content = mode });
             scalingCombo.SelectedIndex = (int)_app.Settings.Scaling;
-            scalingCombo.SelectionChanged += (s, e) =>
+            scalingCombo.SelectionChanged += (sender, e) =>
             {
                 try
                 {
@@ -163,6 +204,70 @@ namespace FluxWall.UI
             };
             s.Children.Add(Theme.SettingsRow("Video scaling", "How the video fills each screen.", scalingCombo));
 
+            var fsToggle = new ToggleSwitch { IsOn = _app.Settings.AutoPauseFullscreen };
+            fsToggle.Toggled += () =>
+            {
+                _app.Settings.AutoPauseFullscreen = fsToggle.IsOn;
+                SettingsStore.Save();
+                _app.WatcherUpdate();
+            };
+            s.Children.Add(Theme.SettingsRow("Pause during fullscreen apps",
+                "The wallpaper pauses when a game or app occupies the whole screen, and resumes afterwards.", fsToggle));
+
+            // Playback already stops whenever the screen is locked or switched off;
+            // this is the extra, optional rule for laptop battery life.
+            var batteryToggle = new ToggleSwitch { IsOn = _app.Settings.PauseOnBattery };
+            batteryToggle.Toggled += () =>
+            {
+                _app.Settings.PauseOnBattery = batteryToggle.IsOn;
+                SettingsStore.Save();
+                _app.Engine.RefreshEnvironmentPause();
+            };
+            s.Children.Add(Theme.SettingsRow("Pause when on battery",
+                "Stops the video while the laptop runs on battery, and resumes when you plug it in. " +
+                "Playback always stops when the screen is locked or off.", batteryToggle));
+
+            _hotkeyBox = new TextBox
+            {
+                Text = _app.Settings.PauseHotkey ?? "",
+                MinWidth = 220,
+                FontSize = 13,
+                Background = Theme.ChipBgB,
+                Foreground = Theme.TextB,
+                BorderBrush = Theme.BorderB,
+                Padding = new Thickness(8, 6, 8, 6),
+            };
+            _hotkeyBox.LostKeyboardFocus += (sender, e) =>
+            {
+                _app.Settings.PauseHotkey = _hotkeyBox.Text?.Trim() ?? "";
+                SettingsStore.Save();
+                _app.ApplyHotkey();
+                RefreshHotkeyStatus();
+            };
+
+            s.Children.Add(Theme.SettingsRow("Pause / resume hotkey",
+                "Example: Ctrl+Alt+W — plus-separated keys, press Enter to apply. Leave empty to disable.",
+                _hotkeyBox));
+
+            // Tells the user why a combination did not take effect instead of
+            // silently ignoring it.
+            _hotkeyStatus = new TextBlock
+            {
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(2, 8, 0, 0),
+                Foreground = Theme.TextMutedB,
+            };
+            s.Children.Add(_hotkeyStatus);
+            RefreshHotkeyStatus();
+
+            return s;
+        }
+
+        FrameworkElement BuildAudioSection()
+        {
+            var s = new StackPanel();
+
             // Audio
             var audioToggle = new ToggleSwitch { IsOn = _app.Settings.PlayWallpaperAudio };
             audioToggle.Toggled += () =>
@@ -173,6 +278,15 @@ namespace FluxWall.UI
             };
             s.Children.Add(Theme.SettingsRow("Play wallpaper audio",
                 "Off by default. Wallpapers stay silent unless you ask for it.", audioToggle));
+
+            s.Children.Add(_visualizer.Content);
+
+            return s;
+        }
+
+        FrameworkElement BuildAutoSwitchSection()
+        {
+            var s = new StackPanel();
 
             // Automatic wallpaper switching
             var autoToggle = new ToggleSwitch { IsOn = _app.Settings.AutoSwitchWallpapers };
@@ -187,7 +301,7 @@ namespace FluxWall.UI
             }
             int intervalIndex = Array.IndexOf(AppSettings.AutoSwitchChoices, _app.Settings.EffectiveAutoSwitchMinutes);
             intervalCombo.SelectedIndex = intervalIndex < 0 ? 1 : intervalIndex;
-            intervalCombo.SelectionChanged += (s, e) =>
+            intervalCombo.SelectionChanged += (sender, e) =>
             {
                 try
                 {
@@ -225,60 +339,9 @@ namespace FluxWall.UI
             return s;
         }
 
-        FrameworkElement BuildBehaviourSection()
+        FrameworkElement BuildUpdatesSection()
         {
             var s = new StackPanel();
-
-            var fsToggle = new ToggleSwitch { IsOn = _app.Settings.AutoPauseFullscreen };
-            fsToggle.Toggled += () =>
-            {
-                _app.Settings.AutoPauseFullscreen = fsToggle.IsOn;
-                SettingsStore.Save();
-                _app.WatcherUpdate();
-            };
-            s.Children.Add(Theme.SettingsRow("Pause during fullscreen apps",
-                "The wallpaper pauses when a game or app occupies the whole screen, and resumes afterwards.", fsToggle));
-
-            // Playback already stops whenever the screen is locked or switched off;
-            // this is the extra, optional rule for laptop battery life.
-            var batteryToggle = new ToggleSwitch { IsOn = _app.Settings.PauseOnBattery };
-            batteryToggle.Toggled += () =>
-            {
-                _app.Settings.PauseOnBattery = batteryToggle.IsOn;
-                SettingsStore.Save();
-                _app.Engine.RefreshEnvironmentPause();
-            };
-            s.Children.Add(Theme.SettingsRow("Pause when on battery",
-                "Stops the video while the laptop runs on battery, and resumes when you plug it in. " +
-                "Playback always stops when the screen is locked or off.", batteryToggle));
-
-            var startupToggle = new ToggleSwitch { IsOn = _app.Settings.StartWithWindows };
-            startupToggle.Toggled += () =>
-            {
-                _app.Settings.StartWithWindows = startupToggle.IsOn;
-                SettingsStore.Save();
-                _app.ApplyStartWithWindows();
-            };
-            s.Children.Add(Theme.SettingsRow("Start with Windows",
-                "Launch VulcansLivingWP automatically when you sign in.", startupToggle));
-
-            var minimizedToggle = new ToggleSwitch { IsOn = _app.Settings.StartMinimized };
-            minimizedToggle.Toggled += () =>
-            {
-                _app.Settings.StartMinimized = minimizedToggle.IsOn;
-                SettingsStore.Save();
-            };
-            s.Children.Add(Theme.SettingsRow("Start minimized to the tray",
-                "Keep the main window hidden until you open it from the tray.", minimizedToggle));
-
-            var restoreToggle = new ToggleSwitch { IsOn = _app.Settings.RestoreLastWallpaper };
-            restoreToggle.Toggled += () =>
-            {
-                _app.Settings.RestoreLastWallpaper = restoreToggle.IsOn;
-                SettingsStore.Save();
-            };
-            s.Children.Add(Theme.SettingsRow("Restore wallpaper on startup",
-                "Replay your last applied wallpaper when VulcansLivingWP launches.", restoreToggle));
 
             var updateToggle = new ToggleSwitch { IsOn = _app.Settings.CheckForUpdates };
             updateToggle.Toggled += () =>
@@ -294,59 +357,14 @@ namespace FluxWall.UI
                 "12 hours. Nothing is downloaded or installed automatically; the About page shows " +
                 "the result and a link to the release.", updateToggle));
 
-            var trayToggle = new ToggleSwitch { IsOn = _app.Settings.ShowTrayIcon };
-            trayToggle.Toggled += () =>
-            {
-                _app.Settings.ShowTrayIcon = trayToggle.IsOn;
-                SettingsStore.Save();
-                _app.Tray.CommitVisible(trayToggle.IsOn);
-            };
-            s.Children.Add(Theme.SettingsRow("Show system tray icon",
-                "Quick pause, resume and exit live in the tray.", trayToggle));
+            var sa = Theme.QuietButton("Open log folder", () => _app.OpenLogFolder());
+            sa.HorizontalAlignment = HorizontalAlignment.Left;
+            sa.Margin = new Thickness(0, 12, 0, 0);
+            s.Children.Add(sa);
 
             return s;
         }
 
-        FrameworkElement BuildHotkeySection()
-        {
-            var s = new StackPanel();
-
-            _hotkeyBox = new TextBox
-            {
-                Text = _app.Settings.PauseHotkey ?? "",
-                MinWidth = 220,
-                FontSize = 13,
-                Background = Theme.ChipBgB,
-                Foreground = Theme.TextB,
-                BorderBrush = Theme.BorderB,
-                Padding = new Thickness(8, 6, 8, 6),
-            };
-            _hotkeyBox.LostKeyboardFocus += (s, e) =>
-            {
-                _app.Settings.PauseHotkey = _hotkeyBox.Text?.Trim() ?? "";
-                SettingsStore.Save();
-                _app.ApplyHotkey();
-                RefreshHotkeyStatus();
-            };
-
-            s.Children.Add(Theme.SettingsRow("Pause / resume hotkey",
-                "Example: Ctrl+Alt+W — plus-separated keys, press Enter to apply. Leave empty to disable.",
-                _hotkeyBox));
-
-            // Tells the user why a combination did not take effect instead of
-            // silently ignoring it.
-            _hotkeyStatus = new TextBlock
-            {
-                FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(2, 8, 0, 0),
-                Foreground = Theme.TextMutedB,
-            };
-            s.Children.Add(_hotkeyStatus);
-            RefreshHotkeyStatus();
-
-            return s;
-        }
         void RefreshHotkeyStatus()
         {
             if (_hotkeyStatus == null) return;

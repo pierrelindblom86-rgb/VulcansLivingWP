@@ -27,11 +27,12 @@ namespace FluxWall.UI
         ContentControl _pageHost;
         TextBlock _stateChip;
         Border _stateDot;
+        HomePage _home;
         LibraryPage _library;
         DisplaysPage _displays;
         SettingsPage _settingsPage;
         AboutPage _about;
-        Button _navLibrary, _navDisplays, _navSettings, _navAbout;
+        Button _navHome, _navLibrary, _navDisplays, _navSettings, _navAbout;
 
         public MainWindow(FluxWallApp app)
         {
@@ -315,10 +316,12 @@ namespace FluxWall.UI
             var g = new Grid { Background = Theme.PanelBgB };
             var panel = new StackPanel { Margin = new Thickness(14, 18, 14, 14) };
 
-            _navLibrary = NavButton("Library", true);
+            _navHome = NavButton("Home", true);
+            _navLibrary = NavButton("Library", false);
             _navDisplays = NavButton("Displays", false);
             _navSettings = NavButton("Settings", false);
             _navAbout = NavButton("About", false);
+            panel.Children.Add(_navHome);
             panel.Children.Add(_navLibrary);
             panel.Children.Add(_navDisplays);
             panel.Children.Add(_navSettings);
@@ -360,7 +363,8 @@ namespace FluxWall.UI
             b.Template = Theme.ButtonTemplate;
             b.Click += (s, e) =>
             {
-                if (text == "Library") Navigate(Page.Library);
+                if (text == "Home") Navigate(Page.Home);
+                else if (text == "Library") Navigate(Page.Library);
                 else if (text == "Displays") Navigate(Page.Displays);
                 else if (text == "Settings") Navigate(Page.Settings);
                 else Navigate(Page.About);
@@ -369,12 +373,16 @@ namespace FluxWall.UI
         }
 
         #region Pages
-        public enum Page { Library, Displays, Settings, About }
+        public enum Page { Home, Library, Displays, Settings, About }
 
         public void Navigate(Page page)
         {
             switch (page)
             {
+                case Page.Home:
+                    _home.Refresh();
+                    _pageHost.Content = _home.Content;
+                    break;
                 case Page.Library:
                     _pageHost.Content = _library.Content;
                     break;
@@ -396,6 +404,7 @@ namespace FluxWall.UI
 
         void Highlight(Page page)
         {
+            SetNav(_navHome, page == Page.Home);
             SetNav(_navLibrary, page == Page.Library);
             SetNav(_navDisplays, page == Page.Displays);
             SetNav(_navSettings, page == Page.Settings);
@@ -414,11 +423,12 @@ namespace FluxWall.UI
         public void Init(FluxWallApp app)
         {
             _library = new LibraryPage(app, _win);
+            _home = new HomePage(app, Navigate);
             _displays = new DisplaysPage(app);
             _settingsPage = new SettingsPage(app);
             _about = new AboutPage(app);
             UpdateStateChip();
-            Navigate(Page.Library);
+            Navigate(Page.Home);
 
             _app.Engine.ManualPauseChanged += UpdateStateChip;
             _app.Engine.WallpaperApplied += OnApplied;

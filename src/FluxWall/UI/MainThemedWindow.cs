@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using FluxWall.Common;
 
 namespace FluxWall.UI
@@ -11,20 +12,20 @@ namespace FluxWall.UI
     /// <summary>Central dark theme palette + small control factory helpers.</summary>
     public static class Theme
     {
-        public static readonly Color BaseBg      = From(0x080A0E);
-        public static readonly Color PanelBg     = From(0x0F1219);
-        public static readonly Color CardBg      = From(0x0F1219);
-        public static readonly Color CardBgHover = From(0x151B24);
-        public static readonly Color Border      = From(0x252D39);
+        public static readonly Color BaseBg      = From(0x0B0B10);
+        public static readonly Color PanelBg     = From(0x121218);
+        public static readonly Color CardBg      = From(0x16161E);
+        public static readonly Color CardBgHover = From(0x1F1F2A);
+        public static readonly Color Border      = From(0x2A2A38);
         public static readonly Color TextMain    = From(0xF0F4F8);
-        public static readonly Color TextMuted   = From(0x8995A5);
-        public static readonly Color Accent      = From(0x00FF88);
-        public static readonly Color AccentHover = From(0x00C76B);
+        public static readonly Color TextMuted   = From(0x9AA0B4);
+        public static readonly Color Accent      = From(0x7C5CFF);
+        public static readonly Color AccentHover = From(0x6A4AF0);
         public static readonly Color Cyan        = From(0x00D4FF);
         public static readonly Color Good        = From(0x3FBF7F);
         public static readonly Color Warn        = From(0xE0A64B);
         public static readonly Color Bad         = From(0xE05768);
-        public static readonly Color ChipBg      = From(0x1E1E26);
+        public static readonly Color ChipBg      = From(0x1C1C27);
 
         public static Color From(int rgb) => Color.FromRgb(
             (byte)((rgb >> 16) & 0xFF), (byte)((rgb >> 8) & 0xFF), (byte)(rgb & 0xFF));
@@ -97,12 +98,12 @@ namespace FluxWall.UI
                         "<ControlTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" " +
                         "xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\" TargetType=\"Slider\">" +
                         "<Grid Height=\"22\" VerticalAlignment=\"Center\" Background=\"Transparent\">" +
-                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#252D39\" VerticalAlignment=\"Center\"/>" +
+                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#2A2A38\" VerticalAlignment=\"Center\"/>" +
                         "<Track x:Name=\"PART_Track\" VerticalAlignment=\"Center\">" +
                         "<Track.DecreaseRepeatButton>" +
                         "<RepeatButton Command=\"{x:Static Slider.DecreaseLarge}\" Focusable=\"False\">" +
                         "<RepeatButton.Template><ControlTemplate TargetType=\"RepeatButton\">" +
-                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#00FF88\"/>" +
+                        "<Border Height=\"4\" CornerRadius=\"2\" Background=\"#7C5CFF\"/>" +
                         "</ControlTemplate></RepeatButton.Template></RepeatButton>" +
                         "</Track.DecreaseRepeatButton>" +
                         "<Track.IncreaseRepeatButton>" +
@@ -114,7 +115,7 @@ namespace FluxWall.UI
                         "<Thumb Width=\"14\" Height=\"14\">" +
                         "<Thumb.Template><ControlTemplate TargetType=\"Thumb\">" +
                         "<Grid><Ellipse Fill=\"#FFFFFF\" Width=\"13\" Height=\"13\"/>" +
-                        "<Ellipse Fill=\"Transparent\" Stroke=\"#00FF88\" StrokeThickness=\"2\" Width=\"14\" Height=\"14\"/></Grid>" +
+                        "<Ellipse Fill=\"Transparent\" Stroke=\"#7C5CFF\" StrokeThickness=\"2\" Width=\"14\" Height=\"14\"/></Grid>" +
                         "</ControlTemplate></Thumb.Template></Thumb>" +
                         "</Track.Thumb></Track></Grid></ControlTemplate>";
                     _sliderTemplate = (ControlTemplate)XamlReader.Parse(xaml);
@@ -162,7 +163,7 @@ namespace FluxWall.UI
             return b;
         }
 
-        /// <summary>Primary neon-green action button.</summary>
+        /// <summary>Primary violet action button.</summary>
         public static Button AccentButton(string text, Action onClick, double fontSize = 14, Thickness? padding = null)
         {
             var b = new Button
@@ -195,6 +196,64 @@ namespace FluxWall.UI
             Foreground = TextB,
             FontFamily = Font,
         };
+
+        /// <summary>Rounded card used across the pages. The violet glow is optional and static.</summary>
+        public static Border Card(UIElement content, double padding, Thickness margin, bool glow = true)
+        {
+            return new Border
+            {
+                Background = CardBgB,
+                BorderBrush = BorderB,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(padding),
+                Margin = margin,
+                Effect = glow ? new DropShadowEffect { Color = Accent, BlurRadius = 18, ShadowDepth = 0, Opacity = 0.22 } : null,
+                Child = content,
+            };
+        }
+
+        /// <summary>Page heading and one-line description, shared by every page.</summary>
+        public static StackPanel PageHeader(string title, string subtitle)
+        {
+            var header = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
+            header.Children.Add(new TextBlock
+            {
+                Text = title, FontSize = 26, FontWeight = FontWeights.SemiBold, Foreground = TextB,
+                TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2),
+            });
+            header.Children.Add(new TextBlock
+            {
+                Text = subtitle, FontSize = 13, Foreground = TextMutedB,
+                TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 2),
+            });
+            return header;
+        }
+
+        /// <summary>
+        /// A titled group of settings or content: heading, optional short description, then the body.
+        /// </summary>
+        public static Border Section(string title, string description, FrameworkElement body)
+        {
+            bool hasDescription = !string.IsNullOrEmpty(description);
+            var stack = new StackPanel();
+            stack.Children.Add(new TextBlock
+            {
+                Text = title, FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = TextB,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, hasDescription ? 3 : 12),
+            });
+            if (hasDescription)
+            {
+                stack.Children.Add(new TextBlock
+                {
+                    Text = description, FontSize = 12.5, Foreground = TextMutedB,
+                    TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 14),
+                });
+            }
+            stack.Children.Add(body);
+            return Card(stack, 18, new Thickness(0, 0, 0, 16), false);
+        }
 
         /// <summary>A row of a settings panel: label on the left, control on the right.</summary>
         public static Grid SettingsRow(string label, string hint, FrameworkElement control)

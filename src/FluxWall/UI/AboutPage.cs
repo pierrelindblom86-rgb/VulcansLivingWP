@@ -42,70 +42,38 @@ namespace FluxWall.UI
             var root = new StackPanel { MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Left };
             scroll.Content = root;
 
-            var title = Theme.Label("VulcansLivingWP — Free Live Wallpaper");
-            title.FontSize = 22; title.FontWeight = FontWeights.SemiBold;
-            root.Children.Add(title);
+            root.Children.Add(Theme.PageHeader("About", "VulcansLivingWP — Free Live Wallpaper"));
 
             var ver = new TextBlock
             {
                 Text = "Version " + AppVersion.Text + "  —  Built for Windows 10 & 11",
-                Foreground = Theme.TextMutedB, FontSize = 13, Margin = new Thickness(0, 4, 0, 16),
+                Foreground = Theme.TextMutedB, FontSize = 13, Margin = new Thickness(0, 0, 0, 16),
             };
             root.Children.Add(ver);
 
-            root.Children.Add(new TextBlock
-            {
-                Text = "What is this?",
-                FontSize = 15, FontWeight = FontWeights.SemiBold,
-                Foreground = Theme.TextB, Margin = new Thickness(0, 0, 0, 8),
-            });
-            root.Children.Add(new TextBlock
-            {
-                Text = "VulcansLivingWP takes your own MP4 or MOV video files and plays them as an animated\n" +
-                       "wallpaper on your desktop, behind your icons — for free. It uses the Windows\n" +
-                       "Media Foundation projector + the desktop WorkerW layer for a natural, native feel.",
-                Foreground = Theme.TextMutedB, FontSize = 13, LineHeight = 20,
-                Margin = new Thickness(0, 0, 0, 14),
-            });
+            root.Children.Add(Theme.Section("What is this?", null, Paragraph(
+                "VulcansLivingWP takes your own MP4 or MOV video files and plays them as an animated\n" +
+                "wallpaper on your desktop, behind your icons — for free. It uses the Windows\n" +
+                "Media Foundation projector + the desktop WorkerW layer for a natural, native feel.")));
 
-            root.Children.Add(new TextBlock
-            {
-                Text = "How it stays light",
-                FontSize = 15, FontWeight = FontWeights.SemiBold,
-                Foreground = Theme.TextB, Margin = new Thickness(0, 0, 0, 8),
-            });
-            root.Children.Add(new TextBlock
-            {
-                Text = "• Hardware-accelerated decoding (Intel/NVIDIA/AMD) with Windows Media Foundation.\n" +
-                       "• Zero layout while paused and almost-never-render when the desktop is covered.\n" +
-                       "• No files are copied or re-encoded — your library is a simple list of paths.\n" +
-                       "• No accounts and no tracking. The only network request is the optional GitHub\n" +
-                       "  update check, and everything keeps working offline.",
-                Foreground = Theme.TextMutedB, FontSize = 13, LineHeight = 20,
-                Margin = new Thickness(0, 0, 0, 14),
-            });
+            root.Children.Add(Theme.Section("How it stays light", null, Paragraph(
+                "• Hardware-accelerated decoding (Intel/NVIDIA/AMD) with Windows Media Foundation.\n" +
+                "• Zero layout while paused and almost-never-render when the desktop is covered.\n" +
+                "• No files are copied or re-encoded — your library is a simple list of paths.\n" +
+                "• No accounts and no tracking. The only network request is the optional GitHub\n" +
+                "  update check, and everything keeps working offline.")));
 
-            root.Children.Add(new TextBlock
-            {
-                Text = "Codecs",
-                FontSize = 15, FontWeight = FontWeights.SemiBold,
-                Foreground = Theme.TextB, Margin = new Thickness(0, 0, 0, 8),
-            });
-            root.Children.Add(new TextBlock
-            {
-                Text = "H.264- or H.265-encoded MP4 and MOV files work the moment the matching\n" +
-                       "Windows codecs are present. (Windows ships H.264 everywhere; H.265/HEVC is\n" +
-                       "free from the Microsoft Store as 'HEVC Video Extensions'.) Older Apple ProRes\n" +
-                       "or animation-encoded MOV files are not decodable by Windows, so a re-encode\n" +
-                       "with any free tool to H.264 MP4 fixes playback.",
-                Foreground = Theme.TextMutedB, FontSize = 13, LineHeight = 20,
-                Margin = new Thickness(0, 0, 0, 16),
-            });
+            root.Children.Add(Theme.Section("Codecs", null, Paragraph(
+                "H.264- or H.265-encoded MP4 and MOV files work the moment the matching\n" +
+                "Windows codecs are present. (Windows ships H.264 everywhere; H.265/HEVC is\n" +
+                "free from the Microsoft Store as 'HEVC Video Extensions'.) Older Apple ProRes\n" +
+                "or animation-encoded MOV files are not decodable by Windows, so a re-encode\n" +
+                "with any free tool to H.264 MP4 fixes playback.")));
 
             root.Children.Add(BuildUpdateCard());
 
             var troubleshooting = Theme.AccentButton("Open troubleshooting log folder", () => _app.OpenLogFolder(), 13);
-            troubleshooting.Margin = new Thickness(0, 16, 0, 0);
+            troubleshooting.Margin = new Thickness(0, 4, 0, 0);
             root.Children.Add(troubleshooting);
 
             root.Children.Add(new TextBlock
@@ -120,26 +88,26 @@ namespace FluxWall.UI
             _page.Children.Add(scroll);
         }
 
+        static TextBlock Paragraph(string text)
+        {
+            return new TextBlock
+            {
+                Text = text,
+                Foreground = Theme.TextMutedB, FontSize = 13, LineHeight = 20,
+            };
+        }
+
         #region Updates
 
         FrameworkElement BuildUpdateCard()
         {
-            var card = new Border
-            {
-                Background = Theme.PanelBgB,
-                BorderBrush = Theme.BorderB,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(16, 14, 16, 14),
-                Margin = new Thickness(0, 0, 0, 18),
-            };
             var s = new StackPanel();
-            card.Child = s;
+            var card = Theme.Card(s, 18, new Thickness(0, 0, 0, 16), false);
 
             s.Children.Add(new TextBlock
             {
                 Text = "Updates",
-                FontSize = 15,
+                FontSize = 16,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = Theme.TextB,
                 Margin = new Thickness(0, 0, 0, 6),

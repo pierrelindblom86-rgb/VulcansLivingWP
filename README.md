@@ -8,7 +8,7 @@
 
 Turn your own MP4 or MOV videos into animated desktop wallpapers. Use a different video on each monitor, or stretch one across all of them. It pauses when a fullscreen app or game is running.
 
-**[⬇ Download the installer](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.5/VulcansLivingWP_Setup.exe)** &nbsp;·&nbsp; **[Latest release](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/latest)**
+**[⬇ Download the installer](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.6/VulcansLivingWP_Setup.exe)** &nbsp;·&nbsp; **[Latest release](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/latest)**
 
 Free · Windows 10 (64-bit) or 11 · MIT license
 
@@ -43,10 +43,21 @@ The image at the top is a real capture of Vulcans Living Wallpaper on a two-moni
 
 | File | What it is |
 |---|---|
-| [`VulcansLivingWP_Setup.exe`](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.5/VulcansLivingWP_Setup.exe) | Windows installer, latest stable release (v1.3.5) |
+| [`VulcansLivingWP_Setup.exe`](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.6/VulcansLivingWP_Setup.exe) | | Windows x64 installer, latest stable release (v1.3.6) |
+| [`VulcansLivingWP_1.3.6_Portable_win-x64.zip`](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.6/VulcansLivingWP_1.3.6_Portable_win-x64.zip) | Portable Windows x64 ZIP: unzip it and run `VulcansLivingWP\VulcansLivingWP.exe`. No installation needed. |
+| [`SHA256SUMS.txt`](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases/download/v1.3.6/SHA256SUMS.txt) | SHA-256 checksums for the installer and the portable ZIP |
 | [All releases](https://github.com/pierrelindblom86-rgb/VulcansLivingWP/releases) | Earlier versions and release notes |
 
-**Requirements:** Windows 10 (64-bit) or Windows 11, and the .NET Framework 4.8 runtime.
+$1
+**Portable version:** unzip `VulcansLivingWP_1.3.6_Portable_win-x64.zip` into a folder you keep, then run `VulcansLivingWP\VulcansLivingWP.exe`. Nothing is installed. Settings and your library are still stored in `%LOCALAPPDATA%\VulcansLivingWP` (see section 14 of the full documentation). If you turn on Start with Windows, keep the folder in place, because the startup entry points to that file.
+
+**Verify your download (SHA-256):** in PowerShell, go to the folder that holds the downloaded file and run:
+
+```powershell
+Get-FileHash .\VulcansLivingWP_Setup.exe -Algorithm SHA256
+```
+
+Compare the hash with the matching line in `SHA256SUMS.txt`. The two values must match exactly. Use the same command with the portable ZIP's file name for that file. Do not run a file whose hash does not match.
 
 ## More from Vulcans
 
@@ -70,10 +81,11 @@ is an optional GitHub update check that you can switch off.
 *Captured from a two-monitor Windows desktop: the video is playing in the desktop layer, and the
 library window floats above it.*
 
-- **Version:** 1.3.4
+- **Version:** 1.3.6
 - **Supported systems:** Windows 10 (64-bit) and Windows 11
 - **One installer, no extra downloads:** runtime components ship with Windows
-- **New in 1.3.4:** reliability and housekeeping — the fullscreen watcher now polls at 10s when its
+- **New in 1.3.6:** redesigned Home, Library, Displays, Settings and About pages, built on the visual redesign from 1.3.5. The About page now shows the correct version. The 1.3.5 build reported 1.3.4, so its update check kept offering 1.3.5.
+- **Still included from 1.3.4:** reliability and housekeeping — the fullscreen watcher now polls at 10s when its
   hook is active (2s only when the hook failed), and the 5s health check skips rebuilding the
   wallpaper plan when the monitor topology has not changed. All 1.3.x fixes are included.
 - **License:** MIT — see [section 23](#23-license).
@@ -648,6 +660,14 @@ the application.
 
 ## 22. Version history
 
+### 1.3.6
+
+Interface and version fix:
+
+- **Redesigned pages.** Home, Library, Displays, Settings and About now have the updated layout, built on the visual redesign from 1.3.5.
+- **Correct version number.** The 1.3.5 build reported 1.3.4 in About, so its update check kept offering 1.3.5. 1.3.6 reports its own version.
+- No change to the wallpaper engine, audio, visualiser, settings file or update check logic.
+
 ### 1.3.4
 
 Reliability and housekeeping:
@@ -795,4 +815,4 @@ The full text is in the [LICENSE](LICENSE) file.
 
 ---
 
-*VulcansLivingWP 1.3.4 — free animated video wallpapers for Windows.*
+*VulcansLivingWP 1.3.6 — free animated video wallpapers for Windows.*
